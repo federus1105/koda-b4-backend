@@ -17,4 +17,8 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool) {
 	productRouter.POST("/create", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.CreateProduct(ctx, db)
 	})
+
+	productRouter.PATCH("/update/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.EditProduct(ctx, db)
+	})
 }
