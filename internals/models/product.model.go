@@ -68,7 +68,8 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, name string, limit, o
 	p.priceoriginal as price,
 	p.description, 
 	p.stock FROM product p
-	JOIN product_images pi ON pi.id = p.id_product_images`
+	JOIN product_images pi ON pi.id = p.id_product_images
+	WHERE is_deleted = false`
 
 	args := []interface{}{}
 	argIdx := 1
