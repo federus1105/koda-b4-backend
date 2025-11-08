@@ -4,7 +4,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func ErrorCreatedMsg(fe validator.FieldError) string {
+func ErrorProductdMsg(fe validator.FieldError) string {
 	field := fe.Field()
 	switch fe.Tag() {
 	case "required":
