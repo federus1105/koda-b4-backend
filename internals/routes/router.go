@@ -20,9 +20,12 @@ func InitRouter(db *pgxpool.Pool) *gin.Engine {
 
 	router.Static("/img", "public")
 
+	// --- ROUTE ---
+	InitAuthRouter(router, db)
+
 	router.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(404, models.Response{
-			Status:  false,
+			Success: false,
 			Message: "Route Not Found, Try Again!",
 		})
 	})
