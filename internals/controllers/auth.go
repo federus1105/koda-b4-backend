@@ -56,7 +56,7 @@ func Register(ctx *gin.Context) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	newUser, err := models.Register(ctxTimeout, db, req.Email, hashed, req.Fullname)
+	newUser, err := models.Register(ctxTimeout, db, hashed, req)
 	if err != nil {
 		ctx.JSON(500, models.Response{
 			Success: false,
@@ -74,4 +74,8 @@ func Register(ctx *gin.Context) {
 			"email":    newUser.Email,
 		},
 	})
+}
+
+func Login(ctx *gin.Context) {
+
 }
