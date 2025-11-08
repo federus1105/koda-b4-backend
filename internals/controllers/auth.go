@@ -1,0 +1,77 @@
+package controllers
+
+import (
+	"context"
+	"errors"
+	"log"
+	"strings"
+	"time"
+
+	"github.com/federus1105/koda-b4-backend/internals/configs"
+	"github.com/federus1105/koda-b4-backend/internals/helper"
+	"github.com/federus1105/koda-b4-backend/internals/libs"
+	"github.com/federus1105/koda-b4-backend/internals/models"
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+)
+
+func Register(ctx *gin.Context) {
+	var req models.AuthRegister
+	// --- VALIDATION ---
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, helper.ErrorRegisterMsg(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid JSON format",
+		})
+		return
+	}
+
+	// --- HASHING ---
+	hashed, err := libs.HashPassword(req.Password)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "failed to hash password",
+		})
+		return
+	}
+
+	db, err := configs.InitDB()
+	if err != nil {
+		log.Println(err)
+	}
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	newUser, err := models.Register(ctxTimeout, db, req.Email, hashed, req.Fullname)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "internal server error",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Register Succesfully",
+		Result: gin.H{
+			"id":       newUser.Id,
+			"fullname": newUser.Fullname,
+			"email":    newUser.Email,
+		},
+	})
+}
