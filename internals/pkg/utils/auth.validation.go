@@ -11,6 +11,8 @@ func ErrorRegisterMsg(fe validator.FieldError) string {
 		return field + " is required"
 	case "max":
 		return field + " must be at most " + fe.Param() + " characters"
+	case "password_complex":
+		return field + " must contain uppercase, lowercase, number, and special character"
 	case "email":
 		return "invalid email format"
 	default:
