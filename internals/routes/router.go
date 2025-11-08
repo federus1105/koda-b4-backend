@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/federus1105/koda-b4-backend/internals/models"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -12,6 +13,7 @@ import (
 
 func InitRouter(db *pgxpool.Pool) *gin.Engine {
 	router := gin.Default()
+	utils.InitValidator()
 	router.Use(gin.Recovery())
 
 	// --- SWAGGER ---
