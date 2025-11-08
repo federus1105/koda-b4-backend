@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/federus1105/koda-b4-backend/internals/controllers"
+	"github.com/federus1105/koda-b4-backend/internals/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -9,7 +10,11 @@ import (
 func InitProductRouter(router *gin.Engine, db *pgxpool.Pool) {
 	productRouter := router.Group("/admin/product")
 
-	productRouter.GET("/list", func(ctx *gin.Context) {
+	productRouter.GET("/list", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetListProduct(ctx, db)
+	})
+
+	productRouter.POST("/create", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.CreateProduct(ctx, db)
 	})
 }
