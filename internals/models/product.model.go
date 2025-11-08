@@ -260,3 +260,27 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 	return product, nil
 
 }
+
+func DeleteProduct(ctx context.Context, db *pgxpool.Pool, id int) error {
+	sql := `UPDATE product SET is_deleted = TRUE
+	WHERE id = $1`
+
+	result, err := db.Exec(ctx, sql, id)
+	if err != nil {
+		log.Printf("failed to execute delete query: %v", err)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			log.Printf("context error: %v", ctxErr)
+		}
+		return err
+	}
+
+	rows := result.RowsAffected()
+	log.Printf("Rows affected: %d", rows)
+
+	if rows == 0 {
+		return fmt.Errorf("product with id %d not found", id)
+	}
+
+	log.Printf("product with id %d successfully deleted", id)
+	return nil
+}
