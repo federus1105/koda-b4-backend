@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/configs"
-	"github.com/federus1105/koda-b4-backend/internals/helper"
-	"github.com/federus1105/koda-b4-backend/internals/libs"
 	"github.com/federus1105/koda-b4-backend/internals/models"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
@@ -23,7 +23,7 @@ func Register(ctx *gin.Context) {
 		if errors.As(err, &ve) {
 			var msgs []string
 			for _, fe := range ve {
-				msgs = append(msgs, helper.ErrorRegisterMsg(fe))
+				msgs = append(msgs, utils.ErrorRegisterMsg(fe))
 			}
 			ctx.JSON(400, models.Response{
 				Success: false,
