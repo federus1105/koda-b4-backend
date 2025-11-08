@@ -37,6 +37,19 @@ type CreateProducts struct {
 	Stock          int                   `form:"stock" binding:"gte=0"`
 }
 
+type UpdateProducts struct {
+	Id          int                   `form:"id"`
+	Name        *string               `form:"name"`
+	Image_one   *multipart.FileHeader `form:"image_one"`
+	Image_two   *multipart.FileHeader `form:"image_two"`
+	Image_three *multipart.FileHeader `form:"image_three"`
+	Image_four  *multipart.FileHeader `form:"image_four"`
+	Price       *float64              `form:"price" binding:"omitempty,gte=5000"`
+	Rating      *float64              `form:"rating" binding:"omitempty,gte=1,lte=10"`
+	Description *string               `form:"description"`
+	Stock       *int                  `form:"stock" binding:"omitempty,gte=0"`
+}
+
 type ProductResponse struct {
 	ID          int               `json:"id"`
 	Name        string            `json:"name"`
@@ -152,4 +165,98 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, body CreateProducts) (
 	}
 
 	return newProduct, nil
+}
+
+func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, images map[string]*string) (CreateProducts, error) {
+	// --- START QUERY TRANSACTION ---
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return CreateProducts{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	// --- DYNAMIC SET PRODUCT ---
+	setClauses := []string{}
+	args := []any{}
+	idx := 1
+
+	if body.Name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name=$%d", idx))
+		args = append(args, *body.Name)
+		idx++
+	}
+	if body.Price != nil {
+		setClauses = append(setClauses, fmt.Sprintf("priceoriginal=$%d", idx))
+		args = append(args, *body.Price)
+		idx++
+	}
+	if body.Rating != nil {
+		setClauses = append(setClauses, fmt.Sprintf("rating=$%d", idx))
+		args = append(args, *body.Rating)
+		idx++
+	}
+	if body.Stock != nil {
+		setClauses = append(setClauses, fmt.Sprintf("stock=$%d", idx))
+		args = append(args, *body.Stock)
+		idx++
+	}
+	if body.Description != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description=$%d", idx))
+		args = append(args, *body.Description)
+		idx++
+	}
+
+	if len(setClauses) > 0 {
+		query := fmt.Sprintf("UPDATE product SET %s WHERE id=$%d", strings.Join(setClauses, ","), idx)
+		args = append(args, body.Id)
+		_, err := tx.Exec(ctx, query, args...)
+		if err != nil {
+			return CreateProducts{}, err
+		}
+	}
+	// --- HANDLE IMAGES ---
+	for key, val := range images {
+		if val != nil {
+			// key = "Image_one", "Image_two", etc.
+			// val = path / filename hasil upload
+			imgQuery := fmt.Sprintf("UPDATE product_images SET %s=$1 WHERE id=$2", strings.ToLower(key))
+			_, err := tx.Exec(ctx, imgQuery, *val, body.Id)
+			if err != nil {
+				return CreateProducts{}, err
+			}
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return CreateProducts{}, err
+	}
+
+	// Ambil data terbaru
+	var product CreateProducts
+	err = db.QueryRow(ctx, `
+        SELECT p.id, name, p.description, p.rating, p.priceoriginal, p.stock, p.id_product_images,
+               pi.photos_one, pi.photos_two, pi.photos_three, pi.photos_four
+        FROM product p
+        JOIN product_images pi ON p.id_product_images = pi.id
+        WHERE p.id=$1
+    `, body.Id).Scan(
+		&product.Id,
+		&product.Name,
+		&product.Description,
+		&product.Rating,
+		&product.Price,
+		&product.Stock,
+		&product.ImageId,
+		&product.Image_oneStr,
+		&product.Image_twoStr,
+		&product.Image_threeStr,
+		&product.Image_fourStr,
+	)
+	if err != nil {
+		return CreateProducts{}, err
+	}
+
+	return product, nil
+
 }
