@@ -8,5 +8,12 @@ import (
 
 func InitAuthRouter(router *gin.Engine, db *pgxpool.Pool) {
 	authRouter := router.Group("/auth")
-	authRouter.POST("/register", controllers.Register)
+
+	authRouter.POST("/register", func(ctx *gin.Context) {
+		controllers.Register(ctx, db)
+	})
+	authRouter.POST("/login", func(ctx *gin.Context) {
+		controllers.Login(ctx, db)
+	})
+
 }
