@@ -1,0 +1,373 @@
+package controllers
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"mime/multipart"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/federus1105/koda-b4-backend/internals/models"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
+	// --- GET QUERY PARAMS ---
+	page, err := strconv.Atoi(ctx.Query("page"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	limit := 10
+	offset := (page - 1) * limit
+	name := ctx.Query("name")
+
+	//  --- VALIDATION PAGE  ---
+	if page == 0 {
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "field params page required",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	products, err := models.GetListProduct(ctxTimeout, db, name, limit, offset)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed Get list data products",
+		})
+		fmt.Println("Error : ", err.Error())
+		return
+	}
+
+	// --- VALIDATION FOR LIST PRODUCT ---
+	if len(products) == 0 {
+		ctx.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    []string{},
+			"message": "Not found list product",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Get data succesfully",
+		Result:  products,
+	})
+}
+
+func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
+	var body models.CreateProducts
+
+	// --- VALIDATION ---
+	if err := ctx.ShouldBind(&body); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorProductdMsg(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid Form format",
+		})
+		return
+	}
+
+	// --- CHECKING CLAIMS TOKEN ---
+	claims, exists := ctx.Get("claims")
+	if !exists {
+		fmt.Println("ERROR :", !exists)
+		ctx.AbortWithStatusJSON(403, models.Response{
+			Success: false,
+			Message: "Please log in again",
+		})
+		return
+	}
+	user, ok := claims.(libs.Claims)
+	if !ok {
+		fmt.Println("ERROR", !ok)
+		ctx.AbortWithStatusJSON(500, models.Response{
+			Success: false,
+			Message: "An error occurred!, please try again.",
+		})
+		return
+	}
+
+	// --- UPLOAD IMAGES ---
+	imageFiles := map[string]*multipart.FileHeader{
+		"photos_one":   body.Image_one,
+		"photos_two":   body.Image_two,
+		"photos_three": body.Image_three,
+		"photos_four":  body.Image_four,
+	}
+
+	imageStrs := map[string]string{}
+
+	// --- MULTIPLE UPLOAD IMAGES ---
+	for key, file := range imageFiles {
+		if file == nil {
+			continue
+		}
+		savePath, generatedFilename, err := utils.UploadImageFile(ctx, file, "public", fmt.Sprintf("%s_%d", key, user.ID))
+		if err != nil {
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: fmt.Sprintf("An error occurred while uploading %s", key),
+			})
+			return
+		}
+
+		if err := ctx.SaveUploadedFile(file, savePath); err != nil {
+			ctx.JSON(500, models.Response{
+				Success: false,
+				Message: fmt.Sprintf("Failed to save %s", key),
+			})
+			return
+		}
+
+		imageStrs[key] = generatedFilename
+	}
+
+	// --- ASSIGN TO BODY ---
+	body.Image_oneStr = imageStrs["photos_one"]
+	body.Image_twoStr = imageStrs["photos_two"]
+	body.Image_threeStr = imageStrs["photos_three"]
+	body.Image_fourStr = imageStrs["photos_four"]
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	product, err := models.CreateProduct(ctxTimeout, db, body)
+	if err != nil {
+		log.Println("ERROR : ", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "An error occurred while saving data",
+		})
+		return
+	}
+
+	//  ---- ASIGN LIST IMAGE ---
+	images := make(map[string]string)
+	if product.Image_oneStr != "" {
+		images["image_one"] = product.Image_oneStr
+	}
+	if product.Image_twoStr != "" {
+		images["image_two"] = product.Image_twoStr
+	}
+	if product.Image_threeStr != "" {
+		images["image_three"] = product.Image_threeStr
+	}
+	if product.Image_fourStr != "" {
+		images["image_four"] = product.Image_fourStr
+	}
+
+	// --- ASSIGN TO STRUCT RESPONSE ---
+	response := models.ProductResponse{
+		ID:          product.Id,
+		Name:        product.Name,
+		ImageID:     product.ImageId,
+		Images:      images,
+		Price:       product.Price,
+		Rating:      product.Rating,
+		Description: product.Description,
+		Stock:       product.Stock,
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Created Product Succesfully",
+		Result:  response,
+	})
+
+}
+
+func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
+	// --- GET PORDUCT ID ---
+	productIDstr := ctx.Param("id")
+	productID, err := strconv.Atoi(productIDstr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "Movie ID tidak valid",
+		})
+		return
+	}
+	var body models.UpdateProducts
+	// --- VALIDATION ---
+	if err := ctx.ShouldBind(&body); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorProductdMsg(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid Form format",
+		})
+		return
+	}
+
+	body.Id = productID
+
+	// --- CHECKING CLAIMS TOKEN ---
+	claims, exists := ctx.Get("claims")
+	if !exists {
+		fmt.Println("ERROR :", !exists)
+		ctx.AbortWithStatusJSON(403, models.Response{
+			Success: false,
+			Message: "Please log in again",
+		})
+		return
+	}
+	user, ok := claims.(libs.Claims)
+	if !ok {
+		fmt.Println("ERROR", !ok)
+		ctx.AbortWithStatusJSON(500, models.Response{
+			Success: false,
+			Message: "An error occurred!, please try again.",
+		})
+		return
+	}
+
+	// --- HANDLE IMAGE UPLOADS ---
+	imageFiles := map[string]*multipart.FileHeader{
+		"photos_one":   body.Image_one,
+		"photos_two":   body.Image_two,
+		"photos_three": body.Image_three,
+		"photos_four":  body.Image_four,
+	}
+
+	imageStrs := map[string]*string{}
+
+	// --- MULTIPLE UPLOAD IMAGES ---
+	for key, file := range imageFiles {
+		if file == nil {
+			continue
+		}
+		savePath, generatedFilename, err := utils.UploadImageFile(ctx, file, "public", fmt.Sprintf("%s_%d", key, user.ID))
+		if err != nil {
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: fmt.Sprintf("An error occurred while uploading %s", key),
+			})
+			return
+		}
+
+		if err := ctx.SaveUploadedFile(file, savePath); err != nil {
+			ctx.JSON(500, models.Response{
+				Success: false,
+				Message: fmt.Sprintf("Failed to save %s", key),
+			})
+			return
+		}
+
+		imageStrs[key] = &generatedFilename
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	product, err := models.EditProduct(ctxTimeout, db, body, imageStrs)
+	if err != nil {
+		log.Println("ERROR : ", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "An error occurred while saving data",
+		})
+		return
+	}
+
+	// --- BUILD RESPONSE OBJECT ---
+	response := map[string]any{
+		"id":          product.Id,
+		"name":        product.Name,
+		"price":       product.Price,
+		"rating":      product.Rating,
+		"description": product.Description,
+		"stock":       product.Stock,
+		"images":      map[string]string{},
+	}
+
+	images := map[string]string{}
+	if product.Image_oneStr != "" {
+		images["image_one"] = product.Image_oneStr
+	}
+	if product.Image_twoStr != "" {
+		images["image_two"] = product.Image_twoStr
+	}
+	if product.Image_threeStr != "" {
+		images["image_three"] = product.Image_threeStr
+	}
+	if product.Image_fourStr != "" {
+		images["image_four"] = product.Image_fourStr
+	}
+	if len(images) > 0 {
+		response["images"] = images
+	}
+
+	ctx.JSON(http.StatusOK, models.ResponseSucces{
+		Success: true,
+		Message: "Product updated successfully",
+		Result:  response,
+	})
+}
+
+func DeleteProduct(ctx *gin.Context, db *pgxpool.Pool) {
+	productIDstr := ctx.Param("id")
+	productId, err := strconv.Atoi(productIDstr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "product id not found",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = models.DeleteProduct(ctxTimeout, db, productId)
+	if err != nil {
+		fmt.Println("ERROR : ", err.Error())
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Internal server error",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Delete product successfully",
+		Result:  fmt.Sprintf("product id %d", productId),
+	})
+}
