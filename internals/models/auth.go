@@ -14,7 +14,7 @@ type AuthRegister struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func Register(ctx context.Context, db *pgxpool.Pool, email, hashedPassword, fullname string) (AuthRegister, error) {
+func Register(ctx context.Context, db *pgxpool.Pool, hashed string, user AuthRegister) (AuthRegister, error) {
 	// --- START TRANSACTION ---
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -27,7 +27,7 @@ func Register(ctx context.Context, db *pgxpool.Pool, email, hashedPassword, full
 	// --- INSERT TABLE USER ---
 	err = tx.QueryRow(ctx,
 		`INSERT INTO users (email, password) VALUES ($1, $2) 
-		RETURNING id`, email, hashedPassword).Scan(&userID)
+		RETURNING id`, user.Email, hashed).Scan(&userID)
 	if err != nil {
 		log.Println("Failed to insert user :", err)
 		return AuthRegister{}, err
@@ -36,7 +36,7 @@ func Register(ctx context.Context, db *pgxpool.Pool, email, hashedPassword, full
 	// --- INSERT TABLE ACCOUNT ---
 	_, err = tx.Exec(ctx,
 		`INSERT INTO account (id_users, fullname) VALUES ($1, $2)`,
-		userID, fullname)
+		userID, user.Fullname)
 	if err != nil {
 		log.Println("Failed to insert account : ", err)
 		return AuthRegister{}, err
@@ -50,7 +50,7 @@ func Register(ctx context.Context, db *pgxpool.Pool, email, hashedPassword, full
 
 	return AuthRegister{
 		Id:       userID,
-		Email:    email,
-		Fullname: fullname,
+		Email:    user.Email,
+		Fullname: user.Fullname,
 	}, nil
 }
