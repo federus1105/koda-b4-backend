@@ -26,6 +26,7 @@ func InitRouter(db *pgxpool.Pool) *gin.Engine {
 	InitAuthRouter(router, db)
 	InitProductRouter(router, db)
 	InitOrderRouter(router, db)
+	InitUserRoute(router, db)
 
 	router.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(404, models.Response{
