@@ -54,3 +54,36 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 		Result:  order,
 	})
 }
+
+func GetDetailOrder(ctx *gin.Context, db *pgxpool.Pool) {
+	// --- GET ORDER ID ---
+	orderIDStr := ctx.Param("id")
+	orderID, err := strconv.Atoi(orderIDStr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "Invalid order ID",
+		})
+		return
+	}
+	// ---- LIMITS QUERY EXECUTION TIME --
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// --- GET DETAIL ORDER ---
+	order, err := models.GetDetailOrder(ctxTimeout, db, orderID)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to fetch order details",
+		})
+		fmt.Println("Error:", err)
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Order detail retrieved successfully",
+		Result:  order,
+	})
+}
