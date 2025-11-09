@@ -13,4 +13,8 @@ func InitOrderRouter(router *gin.Engine, db *pgxpool.Pool) {
 	orderRouter.POST("/list", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetListOrder(ctx, db)
 	})
+
+	orderRouter.GET("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.GetDetailOrder(ctx, db)
+	})
 }
