@@ -166,3 +166,112 @@ func CreateUser(ctx *gin.Context, db *pgxpool.Pool) {
 		Result:  response,
 	})
 }
+
+func EditUser(ctx *gin.Context, db *pgxpool.Pool) {
+	var body models.UserUpdateBody
+
+	// --- GET PORDUCT ID ---
+	userIDSStr := ctx.Param("id")
+	userID, err := strconv.Atoi(userIDSStr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "Invalid user id",
+		})
+		return
+	}
+
+	// --- VALIDATION ---
+	if err := ctx.ShouldBind(&body); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorUserMsg(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid FORM format",
+		})
+		return
+	}
+
+	body.Id = userID
+
+	// --- CHECKING CLAIMS TOKEN ---
+	claims, exists := ctx.Get("claims")
+	if !exists {
+		fmt.Println("ERROR :", !exists)
+		ctx.AbortWithStatusJSON(403, models.Response{
+			Success: false,
+			Message: "Please log in again",
+		})
+		return
+	}
+	user, ok := claims.(libs.Claims)
+	if !ok {
+		fmt.Println("ERROR", !ok)
+		ctx.AbortWithStatusJSON(500, models.Response{
+			Success: false,
+			Message: "An error occurred!, please try again.",
+		})
+		return
+	}
+
+	// --- UPLOAD PHOTO ---
+	if body.Photos != nil {
+		savePath, generatedFilename, err := utils.UploadImageFile(ctx, body.Photos, "public", fmt.Sprintf("user_%d", user.ID))
+		if err != nil {
+			log.Println("Upload image failed:", err)
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: "failed to upload image",
+			})
+			return
+		}
+		if err := ctx.SaveUploadedFile(body.Photos, savePath); err != nil {
+			log.Println("Save file failed : ", err.Error())
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "failed to save image",
+			})
+			return
+		}
+		body.PhotosStr = &generatedFilename
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	users, err := models.EditUser(ctxTimeout, db, body, userID)
+	if err != nil {
+		log.Println("ERROR : ", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "An error occurred while saving data",
+		})
+		return
+	}
+
+	// ---- ASIGN RESPONSE ---
+	response := gin.H{
+		"id":       users.Id,
+		"fullname": users.Fullname,
+		"photos":   users.PhotosStr,
+		"address":  users.Address,
+		"phone":    users.Phone,
+	}
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Create User Succesfully",
+		Result:  response,
+	})
+
+}
