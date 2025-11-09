@@ -1,4 +1,84 @@
+basePath: /
+definitions:
+  models.ResponseSucces:
+    properties:
+      message:
+        type: string
+      result: {}
+      success:
+        type: boolean
+    type: object
+  utils.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  utils.RegisterRequest:
+    properties:
+      email:
+        type: string
+      fullname:
+        maxLength: 20
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - fullname
+    - password
+    type: object
+host: localhost:8011
 info:
   contact: {}
-paths: {}
+  description: This is a Documentation API for Admin Pages
+  title: Admin Pages
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      description: Login user and get JWT token
+      parameters:
+      - description: Login Info
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/utils.LoginRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      summary: Login user
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      description: Register user and Hash Password
+      parameters:
+      - description: Register Info
+        in: body
+        name: Register
+        required: true
+        schema:
+          $ref: '#/definitions/utils.RegisterRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      summary: Register user
+      tags:
+      - Auth
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
