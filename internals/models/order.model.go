@@ -12,12 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type ItemList struct {
+	Name     string `json:"name"`
+	Quantity int    `json:"quantity"`
+}
+
 type OrderList struct {
-	OrderNumber string    `json:"orderNumber"`
-	Date        time.Time `json:"date"`
-	Order       string    `json:"order"`
-	Status      bool      `json:"status"`
-	Total       float64   `json:"total"`
+	OrderNumber string     `json:"orderNumber"`
+	Date        time.Time  `json:"date"`
+	Status      bool       `json:"status"`
+	Total       float64    `json:"total"`
+	Order       []ItemList `json:"order"`
 }
 
 type ProductItem struct {
@@ -46,12 +51,20 @@ type UpdateStatusRequest struct {
 }
 
 func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber, Status string, limit, offset int) ([]OrderList, error) {
+	var p OrderList
+	var productsJSON []byte
+
 	sql := `SELECT 
 	'#ORD-' || LPAD(o.id::text, 3, '0') AS order_number,
     o.createdAt,
-    STRING_AGG(p.name || ' ' || o.quantity || 'x', ', ') AS products,
     o.status,
-    o.total
+    o.total,
+	JSON_AGG(
+			JSON_BUILD_OBJECT(
+				'name', p.name,
+				'quantity', o.quantity
+			)
+		) AS order_items
 	FROM orders o
 	JOIN product_orders po ON po.id_order = o.id
 	JOIN product p ON p.id = po.id_product`
@@ -99,11 +112,14 @@ func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber, Status str
 
 	var order []OrderList
 	for rows.Next() {
-		var p OrderList
-		if err := rows.Scan(&p.OrderNumber, &p.Date, &p.Order, &p.Status, &p.Total); err != nil {
+		if err := rows.Scan(&p.OrderNumber, &p.Date, &p.Status, &p.Total, &productsJSON); err != nil {
 			return nil, err
 		}
 
+		// --- PARSE JSON TO SLICE OF ITEMSLIST ---
+		if err := json.Unmarshal(productsJSON, &p.Order); err != nil {
+			return nil, fmt.Errorf("failed to parse order items JSON: %w", err)
+		}
 		order = append(order, p)
 	}
 
