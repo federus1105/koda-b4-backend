@@ -202,7 +202,7 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	if err != nil {
 		ctx.JSON(404, models.Response{
 			Success: false,
-			Message: "Movie ID tidak valid",
+			Message: "Invalid product id",
 		})
 		return
 	}
