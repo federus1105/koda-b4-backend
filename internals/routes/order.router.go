@@ -17,4 +17,8 @@ func InitOrderRouter(router *gin.Engine, db *pgxpool.Pool) {
 	orderRouter.GET("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetDetailOrder(ctx, db)
 	})
+
+	orderRouter.PUT("/status/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.UpdateOrderStatus(ctx, db)
+	})
 }
