@@ -8,6 +8,11 @@ definitions:
       success:
         type: boolean
     type: object
+  models.UpdateStatusRequest:
+    properties:
+      status:
+        type: boolean
+    type: object
   utils.LoginRequest:
     properties:
       email:
@@ -23,14 +28,9 @@ definitions:
       email:
         type: string
       fullname:
-        maxLength: 20
         type: string
       password:
         type: string
-    required:
-    - email
-    - fullname
-    - password
     type: object
 host: localhost:8011
 info:
@@ -39,6 +39,77 @@ info:
   title: Admin Pages
   version: "1.0"
 paths:
+  /admin/order/{id}:
+    get:
+      description: Get paginated detail of orders
+      parameters:
+      - description: order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Get detail orders
+      tags:
+      - Orders
+  /admin/order/list:
+    get:
+      description: Get paginated list of orders with optional filters
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Filter by order number
+        in: query
+        name: ordernumber
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Get list orders
+      tags:
+      - Orders
+  /admin/order/status/{id}:
+    put:
+      description: Update the status of an order by ID
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Status update info
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateStatusRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Update order status
+      tags:
+      - Orders
   /auth/login:
     post:
       description: Login user and get JWT token
