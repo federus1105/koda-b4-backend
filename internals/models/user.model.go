@@ -24,10 +24,19 @@ type UserBody struct {
 	PhotosStr string                `form:"photosStr"`
 	Fullname  string                `form:"fullname" binding:"required,max=30"`
 	Email     string                `form:"email"  binding:"required,email"`
-	Phone     string                `form:"phone" binding:"max=12"`
+	Phone     string                `form:"phone" binding:"required,max=12"`
 	Password  string                `form:"password" binding:"required,password_complex"`
 	Address   string                `form:"address" binding:"required,max=50"`
 	Role      string                `form:"role" binding:"required,oneof=user admin"`
+}
+
+type UserUpdateBody struct {
+	Id        int                   `form:"id"`
+	Fullname  *string               `form:"fullname,omitempty" binding:"max=30"`
+	Phone     *string               `form:"phone,omitempty" binding:"max=12"`
+	Address   *string               `form:"address,omitempty" binding:"max=50"`
+	Photos    *multipart.FileHeader `form:"photos,"`
+	PhotosStr *string               `form:"photosStr,omitempty"`
 }
 
 func GetListUser(ctx context.Context, db *pgxpool.Pool, name string, limit, offset int) ([]UserList, error) {
@@ -127,4 +136,88 @@ func CreateUser(ctx context.Context, db *pgxpool.Pool, hashPassword string, user
 	}
 
 	return newUser, nil
+}
+
+func EditUser(ctx context.Context, db *pgxpool.Pool, body UserUpdateBody, id int) (UserBody, error) {
+	// --- START QUERY TRANSACTION ---
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return UserBody{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	// --- DYNAMIC SET USER ---
+	setClauses := []string{}
+	args := []any{}
+	idx := 1
+
+	if body.Fullname != nil {
+		setClauses = append(setClauses, fmt.Sprintf("fullname=$%d", idx))
+		args = append(args, *body.Fullname)
+		idx++
+	}
+
+	if body.Phone != nil {
+		setClauses = append(setClauses, fmt.Sprintf("phoneNumber=$%d", idx))
+		args = append(args, *body.Phone)
+		idx++
+	}
+
+	if body.Address != nil {
+		setClauses = append(setClauses, fmt.Sprintf("address=$%d", idx))
+		args = append(args, *body.Address)
+		idx++
+	}
+
+	if body.PhotosStr != nil {
+		setClauses = append(setClauses, fmt.Sprintf("photos=$%d", idx))
+		args = append(args, *body.PhotosStr)
+		idx++
+	}
+
+	if len(setClauses) > 0 {
+		query := fmt.Sprintf("UPDATE account SET %s WHERE id=$%d", strings.Join(setClauses, ","), idx)
+		args = append(args, id)
+		_, err := tx.Exec(ctx, query, args...)
+		if err != nil {
+			log.Println("Failed to update account:", err)
+			return UserBody{}, err
+		}
+	}
+
+	// --- GET UPDATED DATA ---
+	var updated UserBody
+	querySelect := `
+		SELECT 
+		u.id,
+        u.email,
+        u.role,
+		COALESCE(a.fullname, '-'),
+		COALESCE(a.phoneNumber, '-'),
+		COALESCE(a.address, '-'),
+		COALESCE(a.photos, '-')
+	FROM account a
+	JOIN users u ON u.id = a.id_users
+	WHERE a.id = $1
+	`
+	if err := tx.QueryRow(ctx, querySelect, id).Scan(
+		&updated.Id,
+		&updated.Email,
+		&updated.Role,
+		&updated.Fullname,
+		&updated.Phone,
+		&updated.Address,
+		&updated.PhotosStr,
+	); err != nil {
+		log.Println("Failed to fetch updated user:", err)
+		return UserBody{}, err
+	}
+
+	// --- COMMIT TRANSACTION ---
+	if err := tx.Commit(ctx); err != nil {
+		log.Println("Failed to commit transaction:", err)
+		return UserBody{}, err
+	}
+
+	return updated, nil
 }
