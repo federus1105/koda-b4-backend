@@ -18,6 +18,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// GetListUser godoc
+// @Summary Get list users
+// @Description Get paginated list of users with optional search by name
+// @Tags Users
+// @Param page query int false "Page number" default(1)
+// @Param name query string false "Filter by name"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/user/list [get]
+// @Security BearerAuth
 func GetListUser(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
@@ -60,6 +69,21 @@ func GetListUser(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// CreateUser godoc
+// @Summary      Create a new user
+// @Description  Create a new user with optional photo upload
+// @Tags         Users
+// @Accept       multipart/form-data
+// @Param        fullname  formData  string  true   "Full name of the user"
+// @Param        email     formData  string  true   "Email of the user"
+// @Param        password  formData  string  true   "Password"
+// @Param        role      formData  string  true   "Role (admin, user)"
+// @Param        phone     formData  string  true  "Phone number"
+// @Param        address   formData  string  true  "Address"
+// @Param        photos    formData  file    true  "User photo"
+// @Success      200 {object} models.ResponseSucces
+// @Router       /admin/user/create [post]
+// @Security     BearerAuth
 func CreateUser(ctx *gin.Context, db *pgxpool.Pool) {
 	var body models.UserBody
 
@@ -167,6 +191,21 @@ func CreateUser(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// EditUser godoc
+// @Summary      Edit an existing user
+// @Description  Update user details with optional photo upload
+// @Tags         Users
+// @Accept       multipart/form-data
+// @Param        id        path      int     true   "User ID"
+// @Param        fullname  formData  string  false  "Full name of the user"
+// @Param        email     formData  string  false  "Email of the user"
+// @Param        role      formData  string  false  "Role (admin, user)"
+// @Param        phone     formData  string  false  "Phone number"
+// @Param        address   formData  string  false  "Address"
+// @Param        photos    formData  file    false  "User photo"
+// @Success      200 {object} models.ResponseSucces
+// @Router       /admin/user/edit/{id} [patch]
+// @Security     BearerAuth
 func EditUser(ctx *gin.Context, db *pgxpool.Pool) {
 	var body models.UserUpdateBody
 
@@ -270,7 +309,7 @@ func EditUser(ctx *gin.Context, db *pgxpool.Pool) {
 	}
 	ctx.JSON(200, models.ResponseSucces{
 		Success: true,
-		Message: "Create User Succesfully",
+		Message: "Update User Succesfully",
 		Result:  response,
 	})
 
