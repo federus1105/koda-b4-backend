@@ -110,6 +110,163 @@ paths:
       summary: Update order status
       tags:
       - Orders
+  /admin/product/create:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new product with multiple images
+      parameters:
+      - description: Product name
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Product description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - description: Product rating
+        in: formData
+        name: rating
+        required: true
+        type: number
+      - description: Product price
+        in: formData
+        name: price
+        required: true
+        type: number
+      - description: Product stock
+        in: formData
+        name: stock
+        required: true
+        type: integer
+      - description: Primary product image
+        in: formData
+        name: image_one
+        required: true
+        type: file
+      - description: Secondary image
+        in: formData
+        name: image_two
+        type: file
+      - description: Third image
+        in: formData
+        name: image_three
+        type: file
+      - description: Fourth image
+        in: formData
+        name: image_four
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Create a new product
+      tags:
+      - Products
+  /admin/product/delete/{id}:
+    post:
+      description: Delete a product by its ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Delete a product
+      tags:
+      - Products
+  /admin/product/list:
+    get:
+      description: Get paginated list of products with optional name filter
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Filter by product name
+        in: query
+        name: name
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Get list products
+      tags:
+      - Products
+  /admin/product/update/{id}:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Update product details and optionally update images
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Product name
+        in: formData
+        name: name
+        type: string
+      - description: Product description
+        in: formData
+        name: description
+        type: string
+      - description: Product rating
+        in: formData
+        name: rating
+        type: number
+      - description: Product price
+        in: formData
+        name: price
+        type: number
+      - description: Product stock
+        in: formData
+        name: stock
+        type: integer
+      - description: Primary product image
+        in: formData
+        name: image_one
+        type: file
+      - description: Secondary image
+        in: formData
+        name: image_two
+        type: file
+      - description: Third image
+        in: formData
+        name: image_three
+        type: file
+      - description: Fourth image
+        in: formData
+        name: image_four
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Edit an existing product
+      tags:
+      - Products
   /auth/login:
     post:
       description: Login user and get JWT token

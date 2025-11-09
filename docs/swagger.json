@@ -123,6 +123,249 @@
                 }
             }
         },
+        "/admin/product/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new product with multiple images",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Create a new product",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product name",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Product description",
+                        "name": "description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Product rating",
+                        "name": "rating",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Product price",
+                        "name": "price",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Product stock",
+                        "name": "stock",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Primary product image",
+                        "name": "image_one",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Secondary image",
+                        "name": "image_two",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Third image",
+                        "name": "image_three",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Fourth image",
+                        "name": "image_four",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/product/delete/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a product by its ID",
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Delete a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of products with optional name filter",
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get list products",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by product name",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/product/update/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update product details and optionally update images",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Edit an existing product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Product name",
+                        "name": "name",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Product description",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Product rating",
+                        "name": "rating",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Product price",
+                        "name": "price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Product stock",
+                        "name": "stock",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Primary product image",
+                        "name": "image_one",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Secondary image",
+                        "name": "image_two",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Third image",
+                        "name": "image_three",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Fourth image",
+                        "name": "image_four",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login user and get JWT token",
