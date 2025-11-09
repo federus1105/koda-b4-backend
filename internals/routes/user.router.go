@@ -13,4 +13,8 @@ func InitUserRoute(router *gin.Engine, db *pgxpool.Pool) {
 	userRouter.GET("/list", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetListUser(ctx, db)
 	})
+
+	userRouter.POST("/create", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.CreateUser(ctx, db)
+	})
 }
