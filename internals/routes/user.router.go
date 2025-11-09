@@ -17,4 +17,8 @@ func InitUserRoute(router *gin.Engine, db *pgxpool.Pool) {
 	userRouter.POST("/create", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.CreateUser(ctx, db)
 	})
+
+	userRouter.PATCH("/edit/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.EditUser(ctx, db)
+	})
 }
