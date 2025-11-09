@@ -15,6 +15,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Register godoc
+// @Summary 	Register user
+// @Description Register user and Hash Password
+// @Tags 		Auth
+// @Param 		Register body 	utils.RegisterRequest  true 	"Register Info"
+// @Success 	200 {object} 	models.ResponseSucces
+// @Router 		/auth/register [post]
 func Register(ctx *gin.Context, db *pgxpool.Pool) {
 	var req models.AuthRegister
 	// --- VALIDATION ---
@@ -72,6 +79,13 @@ func Register(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// Login godoc
+// @Summary 	Login user
+// @Description Login user and get JWT token
+// @Tags 		Auth
+// @Param 		login body 		utils.LoginRequest  true 	"Login Info"
+// @Success 	200 {object} 	models.ResponseSucces
+// @Router 		/auth/login [post]
 func Login(ctx *gin.Context, db *pgxpool.Pool) {
 	var req models.AuthLogin
 	// --- VALIDATION ---

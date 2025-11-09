@@ -80,7 +80,7 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, name string, limit, o
 
 	// --- SEARCH ---
 	if strings.TrimSpace(name) != "" {
-		sql += fmt.Sprintf(" WHERE p.name ILIKE $%d", argIdx)
+		sql += fmt.Sprintf(" AND p.name ILIKE $%d", argIdx)
 		args = append(args, "%"+name+"%")
 		argIdx++
 	}

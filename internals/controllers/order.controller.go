@@ -11,6 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// GetListOrder godoc
+// @Summary 		Get list orders
+// @Description 	Get paginated list of orders with optional filters
+// @Tags 		Orders
+// @Param 		page 		query 	int 	false 	"Page number" 	default(1)
+// @Param 		ordernumber query 	string 	false 	"Filter by order number"
+// @Param 		status 		query 	string 	false 	"Filter by status"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/order/list [get]
+// @Security BearerAuth
 func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
@@ -55,6 +65,14 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// GetDetailOrder godoc
+// @Summary 		Get detail orders
+// @Description 	Get paginated detail of orders
+// @Tags 		Orders
+// @Param 		id 		path 	int 	true 	"order ID"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/order/{id} [get]
+// @Security BearerAuth
 func GetDetailOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET ORDER ID ---
 	orderIDStr := ctx.Param("id")
@@ -88,6 +106,15 @@ func GetDetailOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// UpdateOrderStatus godoc
+// @Summary Update order status
+// @Description Update the status of an order by ID
+// @Tags Orders
+// @Param id path int true "Order ID"
+// @Param body body models.UpdateStatusRequest true "Status update info"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/order/status/{id} [put]
+// @Security BearerAuth
 func UpdateOrderStatus(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET ORDER ID ---
 	orderIDStr := ctx.Param("id")

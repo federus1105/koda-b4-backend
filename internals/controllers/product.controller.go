@@ -19,6 +19,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// GetListProduct godoc
+// @Summary Get list products
+// @Description Get paginated list of products with optional name filter
+// @Tags Products
+// @Param page query int false "Page number" default(1)
+// @Param name query string false "Filter by product name"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/product/list [get]
+// @Security BearerAuth
 func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
@@ -61,6 +70,23 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// CreateProduct godoc
+// @Summary Create a new product
+// @Description Create a new product with multiple images
+// @Tags Products
+// @Accept multipart/form-data
+// @Param name formData string true "Product name"
+// @Param description formData string true "Product description"
+// @Param rating formData number true "Product rating"
+// @Param price formData number true "Product price"
+// @Param stock formData int true "Product stock"
+// @Param image_one formData file true "Primary product image"
+// @Param image_two formData file false "Secondary image"
+// @Param image_three formData file false "Third image"
+// @Param image_four formData file false "Fourth image"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/product/create [post]
+// @Security BearerAuth
 func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	var body models.CreateProducts
 
@@ -195,6 +221,25 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 
 }
 
+
+// EditProduct godoc
+// @Summary Edit an existing product
+// @Description Update product details and optionally update images
+// @Tags Products
+// @Accept multipart/form-data
+// @Param id path int true "Product ID"
+// @Param name formData string false "Product name"
+// @Param description formData string false "Product description"
+// @Param rating formData number false "Product rating"
+// @Param price formData number false "Product price"
+// @Param stock formData int false "Product stock"
+// @Param image_one formData file false "Primary product image"
+// @Param image_two formData file false "Secondary image"
+// @Param image_three formData file false "Third image"
+// @Param image_four formData file false "Fourth image"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/product/update/{id} [patch]
+// @Security BearerAuth
 func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET PORDUCT ID ---
 	productIDstr := ctx.Param("id")
@@ -334,6 +379,14 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// DeleteProduct godoc
+// @Summary Delete a product
+// @Description Delete a product by its ID
+// @Tags Products
+// @Param id path int true "Product ID"
+// @Success 200 {object} models.ResponseSucces
+// @Router /admin/product/delete/{id} [post]
+// @Security BearerAuth
 func DeleteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	productIDstr := ctx.Param("id")
 	productId, err := strconv.Atoi(productIDstr)
