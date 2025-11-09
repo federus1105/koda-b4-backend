@@ -2,6 +2,8 @@ package models
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,6 +18,31 @@ type OrderList struct {
 	Order       string    `json:"order"`
 	Status      bool      `json:"status"`
 	Total       float64   `json:"total"`
+}
+
+type ProductItem struct {
+	Quantity      int     `json:"quantity"`
+	Size          string  `json:"size"`
+	Variant       string  `json:"variant"`
+	ProductName   string  `json:"product_name"`
+	PriceOriginal float64 `json:"price_original"`
+	PriceDiscount float64 `json:"price_discount"`
+}
+
+type OrderDetail struct {
+	OrderNumber   string        `json:"orderNumber"`
+	Fullname      string        `json:"fullname"`
+	Address       string        `json:"address"`
+	PhoneNumber   string        `json:"phonenumber"`
+	PaymentMethod string        `json:"payment_method"`
+	Delivery      string        `json:"delivery"`
+	Status        bool          `json:"status"`
+	Total         float64       `json:"total"`
+	Products      []ProductItem `json:"products"`
+}
+
+type UpdateStatusRequest struct {
+	Status bool `json:"status"`
 }
 
 func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber, Status string, limit, offset int) ([]OrderList, error) {
@@ -86,4 +113,56 @@ func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber, Status str
 
 	return order, nil
 
+}
+
+func GetDetailOrder(ctx context.Context, db *pgxpool.Pool, OrderID int) (OrderDetail, error) {
+	var order OrderDetail
+	var productsJSON []byte
+
+	sql := `SELECT 
+    '#ORD-' || LPAD(o.id::text, 3, '0') AS order_code,
+    o.fullname,
+    o.address,
+    o.phonenumber,
+	pm.name AS payment_method,
+    o.delivery,
+    o.status,
+    o.total,
+    JSON_AGG(
+        JSON_BUILD_OBJECT(
+            'quantity', o.quantity,
+            'size', o.size,
+            'variant', o.variant,
+            'product_name', p.name,
+            'price_original', p.priceoriginal,
+            'price_discount', p.pricediscount
+        )
+    ) AS products
+	FROM orders o
+	JOIN payment_method pm ON pm.id = o.id_paymentmethod
+	JOIN product_orders po ON po.id_order = o.id
+	JOIN product p ON p.id = po.id_product
+	WHERE o.id = $1
+	GROUP BY o.id, o.fullname, o.address, o.phonenumber, pm.name, o.delivery, o.status, o.total`
+
+	err := db.QueryRow(ctx, sql, OrderID).Scan(
+		&order.OrderNumber,
+		&order.Fullname,
+		&order.Address,
+		&order.PhoneNumber,
+		&order.PaymentMethod,
+		&order.Delivery,
+		&order.Status,
+		&order.Total,
+		&productsJSON,
+	)
+	if err != nil {
+		return order, err
+	}
+
+	if err := json.Unmarshal(productsJSON, &order.Products); err != nil {
+		return order, errors.New("failed to parse products JSON: " + err.Error())
+	}
+
+	return order, nil
 }
