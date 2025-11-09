@@ -267,6 +267,125 @@ paths:
       summary: Edit an existing product
       tags:
       - Products
+  /admin/user/create:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new user with optional photo upload
+      parameters:
+      - description: Full name of the user
+        in: formData
+        name: fullname
+        required: true
+        type: string
+      - description: Email of the user
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: Password
+        in: formData
+        name: password
+        required: true
+        type: string
+      - description: Role (admin, user)
+        in: formData
+        name: role
+        required: true
+        type: string
+      - description: Phone number
+        in: formData
+        name: phone
+        required: true
+        type: string
+      - description: Address
+        in: formData
+        name: address
+        required: true
+        type: string
+      - description: User photo
+        in: formData
+        name: photos
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Create a new user
+      tags:
+      - Users
+  /admin/user/edit/{id}:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Update user details with optional photo upload
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Full name of the user
+        in: formData
+        name: fullname
+        type: string
+      - description: Email of the user
+        in: formData
+        name: email
+        type: string
+      - description: Role (admin, user)
+        in: formData
+        name: role
+        type: string
+      - description: Phone number
+        in: formData
+        name: phone
+        type: string
+      - description: Address
+        in: formData
+        name: address
+        type: string
+      - description: User photo
+        in: formData
+        name: photos
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Edit an existing user
+      tags:
+      - Users
+  /admin/user/list:
+    get:
+      description: Get paginated list of users with optional search by name
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Filter by name
+        in: query
+        name: name
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Get list users
+      tags:
+      - Users
   /auth/login:
     post:
       description: Login user and get JWT token
