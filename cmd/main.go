@@ -9,6 +9,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// @title Admin Pages
+// @version 1.0
+// @description This is a Documentation API for Admin Pages
+// @host localhost:8011
+// @BasePath /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and your JWT token.
 func main() {
 	// --- LOAD .ENV IF DEVELOPMENT ---
 	if os.Getenv("ENV") != "production" {
