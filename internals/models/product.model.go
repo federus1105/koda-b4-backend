@@ -38,16 +38,20 @@ type CreateProducts struct {
 }
 
 type UpdateProducts struct {
-	Id          int                   `form:"id"`
-	Name        *string               `form:"name"`
-	Image_one   *multipart.FileHeader `form:"image_one"`
-	Image_two   *multipart.FileHeader `form:"image_two"`
-	Image_three *multipart.FileHeader `form:"image_three"`
-	Image_four  *multipart.FileHeader `form:"image_four"`
-	Price       *float64              `form:"price" binding:"omitempty,gte=5000"`
-	Rating      *float64              `form:"rating" binding:"omitempty,gte=1,lte=10"`
-	Description *string               `form:"description"`
-	Stock       *int                  `form:"stock" binding:"omitempty,gte=0"`
+	Id             int                   `form:"id"`
+	Name           *string               `form:"name"`
+	Image_one      *multipart.FileHeader `form:"image_one"`
+	Image_two      *multipart.FileHeader `form:"image_two"`
+	Image_three    *multipart.FileHeader `form:"image_three"`
+	Image_four     *multipart.FileHeader `form:"image_four"`
+	Image_oneStr   *string               `form:"image_oneStr"`
+	Image_twoStr   *string               `form:"image_twoStr,omitempty"`
+	Image_threeStr *string               `form:"image_threeStr,omitempty"`
+	Image_fourStr  *string               `form:"image_fourStr,omitempty"`
+	Price          *float64              `form:"price" binding:"omitempty,gte=5000"`
+	Rating         *float64              `form:"rating" binding:"omitempty,gte=1,lte=10"`
+	Description    *string               `form:"description"`
+	Stock          *int                  `form:"stock" binding:"omitempty,gte=0"`
 }
 
 type ProductResponse struct {
@@ -215,27 +219,42 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 			return CreateProducts{}, err
 		}
 	}
+
+	// --- TAKE THE ID FIRST ---
+	var imageId int
+	err = tx.QueryRow(ctx, "SELECT id_product_images FROM product WHERE id=$1", body.Id).Scan(&imageId)
+	if err != nil {
+		return CreateProducts{}, err
+	}
+
 	// --- HANDLE IMAGES ---
 	for key, val := range images {
+		var column string
+		switch key {
+		case "photos_one":
+			column = "photos_one"
+		case "photos_two":
+			column = "photos_two"
+		case "photos_three":
+			column = "photos_three"
+		case "photos_four":
+			column = "photos_four"
+		default:
+			continue
+		}
+
 		if val != nil {
-			// key = "Image_one", "Image_two", etc.
-			// val = path / filename hasil upload
-			imgQuery := fmt.Sprintf("UPDATE product_images SET %s=$1 WHERE id=$2", strings.ToLower(key))
-			_, err := tx.Exec(ctx, imgQuery, *val, body.Id)
+			imgQuery := fmt.Sprintf("UPDATE product_images SET %s=$1 WHERE id=$2", column)
+			_, err := tx.Exec(ctx, imgQuery, *val, imageId)
 			if err != nil {
 				return CreateProducts{}, err
 			}
 		}
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		return CreateProducts{}, err
-	}
-
-	// Ambil data terbaru
+	// ----- GET DATA  ----
 	var product CreateProducts
-	err = db.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
         SELECT p.id, name, p.description, p.rating, p.priceoriginal, p.stock, p.id_product_images,
                pi.photos_one, pi.photos_two, pi.photos_three, pi.photos_four
         FROM product p
@@ -255,6 +274,27 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 		&product.Image_fourStr,
 	)
 	if err != nil {
+		return CreateProducts{}, err
+	}
+
+	// --- ASIGN IMAGE STR TO RETURN STRUCT RESPONSE---
+	if body.Image_oneStr != nil {
+		product.Image_oneStr = *body.Image_oneStr
+	}
+	if body.Image_twoStr != nil {
+		product.Image_twoStr = *body.Image_twoStr
+	}
+
+	if body.Image_threeStr != nil {
+		product.Image_threeStr = *body.Image_threeStr
+	}
+	if body.Image_fourStr != nil {
+		product.Image_fourStr = *body.Image_fourStr
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		log.Println("Failed to commit transaction:", err)
 		return CreateProducts{}, err
 	}
 
