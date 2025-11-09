@@ -32,10 +32,10 @@ type UserBody struct {
 
 type UserUpdateBody struct {
 	Id        int                   `form:"id"`
-	Fullname  *string               `form:"fullname,omitempty" binding:"max=30"`
-	Phone     *string               `form:"phone,omitempty" binding:"max=12"`
-	Address   *string               `form:"address,omitempty" binding:"max=50"`
-	Photos    *multipart.FileHeader `form:"photos,"`
+	Fullname  *string               `form:"fullname" binding:"omitempty,max=30"`
+	Phone     *string               `form:"phone" binding:"omitempty,max=12"`
+	Address   *string               `form:"address" binding:"omitempty,max=50"`
+	Photos    *multipart.FileHeader `form:"photos"`
 	PhotosStr *string               `form:"photosStr,omitempty"`
 }
 
