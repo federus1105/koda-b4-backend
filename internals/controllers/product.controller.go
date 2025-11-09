@@ -21,22 +21,15 @@ import (
 
 func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
-	page, err := strconv.Atoi(ctx.Query("page"))
-	if err != nil {
-		fmt.Println(err)
+	pageStr := ctx.Query("page")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
 	}
+
 	limit := 10
 	offset := (page - 1) * limit
 	name := ctx.Query("name")
-
-	//  --- VALIDATION PAGE  ---
-	if page == 0 {
-		ctx.JSON(400, models.Response{
-			Success: false,
-			Message: "field params page required",
-		})
-		return
-	}
 
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
