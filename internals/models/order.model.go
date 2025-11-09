@@ -166,3 +166,9 @@ func GetDetailOrder(ctx context.Context, db *pgxpool.Pool, OrderID int) (OrderDe
 
 	return order, nil
 }
+
+func UpdateOrderStatus(ctx context.Context, db *pgxpool.Pool, orderID int, status bool) error {
+	sql := `UPDATE orders SET status = $1 WHERE id = $2`
+	_, err := db.Exec(ctx, sql, status, orderID)
+	return err
+}
