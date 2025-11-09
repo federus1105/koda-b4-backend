@@ -10,7 +10,7 @@ import (
 func InitOrderRouter(router *gin.Engine, db *pgxpool.Pool) {
 	orderRouter := router.Group("/admin/order")
 
-	orderRouter.POST("/list", middlewares.VerifyToken, func(ctx *gin.Context) {
+	orderRouter.GET("/list", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetListOrder(ctx, db)
 	})
 
