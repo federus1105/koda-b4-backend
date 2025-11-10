@@ -16,6 +16,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// GetListCategories godoc
+// @Summary      Get list of categories
+// @Description  Retrieve a paginated list of categories, optionally filtered by name.
+// @Tags         Categories
+// @Param        page  query     int     false  "Page number for pagination (default: 1)"
+// @Param        name  query     string  false  "Filter categories by name"
+// @Success      200   {object}  models.ResponseSucces  "Get data successfully"
+// @Router       /admin/categories [get]
+// @Security BearerAuth
 func GetListCategories(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
@@ -58,6 +67,14 @@ func GetListCategories(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// CreateCategory godoc
+// @Summary      Create a new category
+// @Description  Create a new category with the provided data.
+// @Tags         Categories
+// @Param        category  body utils.CategoriesRequest  true  "Category data"
+// @Success      200  {object}  models.ResponseSucces  "Create Categories Successfully"
+// @Router       /admin/categories [post]
+// @Security BearerAuth
 func CreateCategory(ctx *gin.Context, db *pgxpool.Pool) {
 	var input models.Categories
 
@@ -102,6 +119,15 @@ func CreateCategory(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// UpdateCategories godoc
+// @Summary      Update category by ID
+// @Description  Update an existing category using its ID.
+// @Tags         Categories
+// @Param        id        path      int                     true   "Category ID"
+// @Param        category   body      utils.CategoriesRequest  true   "Updated category data"
+// @Success      200        {object}  models.ResponseSucces    "Update Categories Successfully"
+// @Router       /admin/categories/{id} [put]
+// @Security BearerAuth
 func UpdateCategories(ctx *gin.Context, db *pgxpool.Pool) {
 	var body models.Categories
 	// --- GET CATEGORIES ID ---
@@ -164,6 +190,14 @@ func UpdateCategories(ctx *gin.Context, db *pgxpool.Pool) {
 
 }
 
+// DeleteCategories godoc
+// @Summary      Delete category by ID
+// @Description  Delete a category based on its ID. Returns 404 if the category is not found.
+// @Tags         Categories
+// @Param        id   path      int  true  "Category ID"
+// @Success      200  {object}  models.ResponseSucces  "Delete categories successfully"
+// @Router       /admin/categories/{id} [delete]
+// @Security BearerAuth
 func DeleteCategories(ctx *gin.Context, db *pgxpool.Pool) {
 	categoryIDstr := ctx.Param("id")
 	categoryID, err := strconv.Atoi(categoryIDstr)
