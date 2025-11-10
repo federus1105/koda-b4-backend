@@ -17,4 +17,8 @@ func InitCategoriesRouter(router *gin.Engine, db *pgxpool.Pool) {
 	categoriesRouter.POST("", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.CreateCategory(ctx, db)
 	})
+
+	categoriesRouter.PUT("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.UpdateCategories(ctx, db)
+	})
 }
