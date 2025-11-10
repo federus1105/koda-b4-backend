@@ -10,19 +10,19 @@ import (
 func InitCategoriesRouter(router *gin.Engine, db *pgxpool.Pool) {
 	categoriesRouter := router.Group("/admin/categories")
 
-	categoriesRouter.GET("", middlewares.VerifyToken, func(ctx *gin.Context) {
+	categoriesRouter.GET("", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.GetListCategories(ctx, db)
 	})
 
-	categoriesRouter.POST("", middlewares.VerifyToken, func(ctx *gin.Context) {
+	categoriesRouter.POST("", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.CreateCategory(ctx, db)
 	})
 
-	categoriesRouter.PUT("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+	categoriesRouter.PUT("/:id", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.UpdateCategories(ctx, db)
 	})
 
-	categoriesRouter.DELETE("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+	categoriesRouter.DELETE("/:id", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.DeleteCategories(ctx, db)
 	})
 }

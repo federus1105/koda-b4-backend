@@ -10,16 +10,17 @@ import (
 )
 
 type Claims struct {
-	ID int `json:"id"`
+	ID   int    `json:"id"`
+	Role string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func NewJWTClaims(ID int) *Claims {
-	godotenv.Load()
+func NewJWTClaims(ID int, role string) *Claims {
 	return &Claims{
-		ID: ID,
+		ID:   ID,
+		Role: role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 10)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 60)),
 			Issuer:    os.Getenv("JWT_ISSUER"),
 		},
 	}

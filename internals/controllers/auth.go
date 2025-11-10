@@ -140,7 +140,7 @@ func Login(ctx *gin.Context, db *pgxpool.Pool) {
 	}
 
 	// --- GENERATE JWT TOKEN
-	claims := libs.NewJWTClaims(req.Id)
+	claims := libs.NewJWTClaims(user.Id, user.Role)
 	jwtToken, err := claims.GenToken()
 	if err != nil {
 		fmt.Println("Internal Server Error.\nCause: ", err)
