@@ -4,7 +4,7 @@
  
 ## 📸 Preview
 ### Swagger Documentation
-![alt text](/images/image.png)
+![alt text](/db//erd//image.png)
 ### Table ERD Coffe-shop
 ```mermaid
 erDiagram
