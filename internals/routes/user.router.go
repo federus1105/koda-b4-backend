@@ -10,15 +10,15 @@ import (
 func InitUserRoute(router *gin.Engine, db *pgxpool.Pool) {
 	userRouter := router.Group("/admin/user")
 
-	userRouter.GET("", middlewares.VerifyToken, func(ctx *gin.Context) {
+	userRouter.GET("", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.GetListUser(ctx, db)
 	})
 
-	userRouter.POST("", middlewares.VerifyToken, func(ctx *gin.Context) {
+	userRouter.POST("", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.CreateUser(ctx, db)
 	})
 
-	userRouter.PATCH("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+	userRouter.PATCH("/:id", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.EditUser(ctx, db)
 	})
 }
