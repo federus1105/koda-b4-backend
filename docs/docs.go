@@ -15,7 +15,143 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/admin/order/list": {
+        "/admin/categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a paginated list of categories, optionally filtered by name.",
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Get list of categories",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number for pagination (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter categories by name",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Get data successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new category with the provided data.",
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Create a new category",
+                "parameters": [
+                    {
+                        "description": "Category data",
+                        "name": "category",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/utils.CategoriesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Create Categories Successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/categories/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing category using its ID.",
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Update category by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated category data",
+                        "name": "category",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/utils.CategoriesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Update Categories Successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a category based on its ID. Returns 404 if the category is not found.",
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Delete category by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Delete categories successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/order": {
             "get": {
                 "security": [
                     {
@@ -58,7 +194,36 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/order/status/{id}": {
+        "/admin/order/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated detail of orders",
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get detail orders",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -98,25 +263,31 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/order/{id}": {
+        "/admin/product": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get paginated detail of orders",
+                "description": "Get paginated list of products with optional name filter",
                 "tags": [
-                    "Orders"
+                    "Products"
                 ],
-                "summary": "Get detail orders",
+                "summary": "Get list products",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "order ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by product name",
+                        "name": "name",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -127,9 +298,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/admin/product/create": {
+            },
             "post": {
                 "security": [
                     {
@@ -247,44 +416,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/product/list": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get paginated list of products with optional name filter",
-                "tags": [
-                    "Products"
-                ],
-                "summary": "Get list products",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by product name",
-                        "name": "name",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.ResponseSucces"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/product/update/{id}": {
+        "/admin/product/{id}": {
             "patch": {
                 "security": [
                     {
@@ -372,7 +504,42 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/user/create": {
+        "/admin/user": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated list of users with optional search by name",
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get list users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by name",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -448,7 +615,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/user/edit/{id}": {
+        "/admin/user/{id}": {
             "patch": {
                 "security": [
                     {
@@ -506,43 +673,6 @@ const docTemplate = `{
                         "description": "User photo",
                         "name": "photos",
                         "in": "formData"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.ResponseSucces"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/user/list": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get paginated list of users with optional search by name",
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Get list users",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by name",
-                        "name": "name",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -630,6 +760,14 @@ const docTemplate = `{
             "properties": {
                 "status": {
                     "type": "boolean"
+                }
+            }
+        },
+        "utils.CategoriesRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
                 }
             }
         },
