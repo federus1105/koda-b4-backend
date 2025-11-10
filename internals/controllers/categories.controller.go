@@ -86,7 +86,7 @@ func CreateCategory(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	newCategory, err := models.CreateCategory(ctxTimeout, db, input)
+	newCategory, err := models.CreateCategories(ctxTimeout, db, input)
 	if err != nil {
 		ctx.JSON(500, models.Response{
 			Success: false,
@@ -162,4 +162,42 @@ func UpdateCategories(ctx *gin.Context, db *pgxpool.Pool) {
 		Result:  categories,
 	})
 
+}
+
+func DeleteCategories(ctx *gin.Context, db *pgxpool.Pool) {
+	categoryIDstr := ctx.Param("id")
+	categoryID, err := strconv.Atoi(categoryIDstr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "categories id not found",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = models.DeleteCategories(ctxTimeout, db, categoryID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "categories not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to delete categories",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Delete categories successfully",
+		Result:  fmt.Sprintf("categories id %d", categoryID),
+	})
 }
