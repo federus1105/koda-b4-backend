@@ -58,7 +58,7 @@ func GetListCategories(ctx context.Context, db *pgxpool.Pool, name string, limit
 
 }
 
-func CreateCategory(ctx context.Context, db *pgxpool.Pool, body Categories) (Categories, error) {
+func CreateCategories(ctx context.Context, db *pgxpool.Pool, body Categories) (Categories, error) {
 	sql := `INSERT INTO categories (name) VALUES ($1) RETURNING id, name, created_at`
 	values := []any{body.Name}
 	var newCategory Categories
@@ -84,4 +84,26 @@ func UpdateCategories(ctx context.Context, db *pgxpool.Pool, body Categories, id
 	}
 
 	return updated, nil
+}
+
+func DeleteCategories(ctx context.Context, db *pgxpool.Pool, id int) error {
+	sql := `delete from categories where id = $1`
+
+	result, err := db.Exec(ctx, sql, id)
+	if err != nil {
+		log.Printf("Failed to execute delete, Error: %v", err)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			log.Printf("context error: %v", ctxErr)
+		}
+		return err
+	}
+	rows := result.RowsAffected()
+	log.Printf("Rows affected: %d", rows)
+
+	if rows == 0 {
+		return fmt.Errorf("categories with id %d not found", id)
+	}
+
+	log.Printf("categories with id %d successfully deleted", id)
+	return nil
 }
