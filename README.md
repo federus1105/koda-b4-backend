@@ -158,6 +158,10 @@ swag init -g ./cmd/main.go
 #### ⚠️ Make sure the server is running
 ```http://localhost:8011/swagger/index.html```
 
+
+<br>
+
+
 ## 🗃️ How to run Database Migrations
 ### ⚠️ Attention: This only applies to PostgreSQL, because enums can only be used in PostgreSQL.
 ### Install Go migrate
