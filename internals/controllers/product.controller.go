@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -151,7 +152,7 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		if err != nil {
 			ctx.JSON(400, models.Response{
 				Success: false,
-				Message: fmt.Sprintf("An error occurred while uploading %s", key),
+				Message: err.Error(),
 			})
 			return
 		}
@@ -220,7 +221,6 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 
 }
-
 
 // EditProduct godoc
 // @Summary Edit an existing product
@@ -315,7 +315,7 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		if err != nil {
 			ctx.JSON(400, models.Response{
 				Success: false,
-				Message: fmt.Sprintf("An error occurred while uploading %s", key),
+				Message: err.Error(),
 			})
 			return
 		}
@@ -331,15 +331,31 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		imageStrs[key] = &generatedFilename
 	}
 
+	// --- CHECKING ROWS UPDATE ---
+	if libs.IsStructEmptyExcept(body, "Id") && len(imageStrs) == 0 {
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "No data to update",
+		})
+		return
+	}
+
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	product, err := models.EditProduct(ctxTimeout, db, body, imageStrs)
 	if err != nil {
-		log.Println("ERROR : ", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "Product not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
 		ctx.JSON(500, models.Response{
 			Success: false,
-			Message: "An error occurred while saving data",
+			Message: "Failed to update product",
 		})
 		return
 	}
@@ -403,10 +419,17 @@ func DeleteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	defer cancel()
 	err = models.DeleteProduct(ctxTimeout, db, productId)
 	if err != nil {
-		fmt.Println("ERROR : ", err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "Product not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
 		ctx.JSON(500, models.Response{
 			Success: false,
-			Message: "Internal server error",
+			Message: "Failed to delete product",
 		})
 		return
 	}

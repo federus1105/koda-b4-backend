@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -91,11 +93,18 @@ func GetDetailOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET DETAIL ORDER ---
 	order, err := models.GetDetailOrder(ctxTimeout, db, orderID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "order not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
 		ctx.JSON(500, models.Response{
 			Success: false,
-			Message: "Failed to fetch order details",
+			Message: "Failed to get detail product",
 		})
-		fmt.Println("Error:", err)
 		return
 	}
 
@@ -140,11 +149,18 @@ func UpdateOrderStatus(ctx *gin.Context, db *pgxpool.Pool) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := models.UpdateOrderStatus(ctxTimeout, db, orderID, body.Status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "order not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
 		ctx.JSON(500, models.Response{
 			Success: false,
-			Message: "Failed to update order status",
+			Message: "Failed to update status",
 		})
-		fmt.Println("Error:", err)
 		return
 	}
 
