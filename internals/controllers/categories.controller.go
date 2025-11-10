@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
@@ -99,4 +100,66 @@ func CreateCategory(ctx *gin.Context, db *pgxpool.Pool) {
 		Message: "Create Categories Successfully",
 		Result:  newCategory,
 	})
+}
+
+func UpdateCategories(ctx *gin.Context, db *pgxpool.Pool) {
+	var body models.Categories
+	// --- GET CATEGORIES ID ---
+	categoryIDstr := ctx.Param("id")
+	categoriesID, err := strconv.Atoi(categoryIDstr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "Invalid categories id",
+		})
+		return
+	}
+
+	// --- VALIDATION ---
+	if err := ctx.ShouldBind(&body); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorUserMsg(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid Form format",
+		})
+		return
+	}
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	categories, err := models.UpdateCategories(ctxTimeout, db, body, categoriesID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "categories not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to update categories",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Update Categories Succesfully",
+		Result:  categories,
+	})
+
 }
