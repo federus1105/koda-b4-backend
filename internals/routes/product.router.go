@@ -10,15 +10,15 @@ import (
 func InitProductRouter(router *gin.Engine, db *pgxpool.Pool) {
 	productRouter := router.Group("/admin/product")
 
-	productRouter.GET("/list", middlewares.VerifyToken, func(ctx *gin.Context) {
+	productRouter.GET("", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetListProduct(ctx, db)
 	})
 
-	productRouter.POST("/create", middlewares.VerifyToken, func(ctx *gin.Context) {
+	productRouter.POST("", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.CreateProduct(ctx, db)
 	})
 
-	productRouter.PATCH("/update/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+	productRouter.PATCH("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.EditProduct(ctx, db)
 	})
 

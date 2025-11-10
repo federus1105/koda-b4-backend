@@ -26,7 +26,7 @@ import (
 // @Param page query int false "Page number" default(1)
 // @Param name query string false "Filter by product name"
 // @Success 200 {object} models.ResponseSucces
-// @Router /admin/product/list [get]
+// @Router /admin/product [get]
 // @Security BearerAuth
 func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
@@ -85,7 +85,7 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
 // @Param image_three formData file false "Third image"
 // @Param image_four formData file false "Fourth image"
 // @Success 200 {object} models.ResponseSucces
-// @Router /admin/product/create [post]
+// @Router /admin/product [post]
 // @Security BearerAuth
 func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	var body models.CreateProducts
@@ -238,7 +238,7 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 // @Param image_three formData file false "Third image"
 // @Param image_four formData file false "Fourth image"
 // @Success 200 {object} models.ResponseSucces
-// @Router /admin/product/update/{id} [patch]
+// @Router /admin/product/{id} [patch]
 // @Security BearerAuth
 func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET PORDUCT ID ---

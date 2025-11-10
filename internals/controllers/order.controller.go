@@ -19,7 +19,7 @@ import (
 // @Param 		ordernumber query 	string 	false 	"Filter by order number"
 // @Param 		status 		query 	string 	false 	"Filter by status"
 // @Success 200 {object} models.ResponseSucces
-// @Router /admin/order/list [get]
+// @Router /admin/order [get]
 // @Security BearerAuth
 func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
@@ -113,7 +113,7 @@ func GetDetailOrder(ctx *gin.Context, db *pgxpool.Pool) {
 // @Param id path int true "Order ID"
 // @Param body body models.UpdateStatusRequest true "Status update info"
 // @Success 200 {object} models.ResponseSucces
-// @Router /admin/order/status/{id} [put]
+// @Router /admin/order/{id} [put]
 // @Security BearerAuth
 func UpdateOrderStatus(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET ORDER ID ---
