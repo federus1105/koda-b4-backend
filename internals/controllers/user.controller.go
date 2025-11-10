@@ -25,7 +25,7 @@ import (
 // @Param page query int false "Page number" default(1)
 // @Param name query string false "Filter by name"
 // @Success 200 {object} models.ResponseSucces
-// @Router /admin/user/list [get]
+// @Router /admin/user [get]
 // @Security BearerAuth
 func GetListUser(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
@@ -82,7 +82,7 @@ func GetListUser(ctx *gin.Context, db *pgxpool.Pool) {
 // @Param        address   formData  string  true  "Address"
 // @Param        photos    formData  file    true  "User photo"
 // @Success      200 {object} models.ResponseSucces
-// @Router       /admin/user/create [post]
+// @Router       /admin/user [post]
 // @Security     BearerAuth
 func CreateUser(ctx *gin.Context, db *pgxpool.Pool) {
 	var body models.UserBody
@@ -204,7 +204,7 @@ func CreateUser(ctx *gin.Context, db *pgxpool.Pool) {
 // @Param        address   formData  string  false  "Address"
 // @Param        photos    formData  file    false  "User photo"
 // @Success      200 {object} models.ResponseSucces
-// @Router       /admin/user/edit/{id} [patch]
+// @Router       /admin/user/{id} [patch]
 // @Security     BearerAuth
 func EditUser(ctx *gin.Context, db *pgxpool.Pool) {
 	var body models.UserUpdateBody
