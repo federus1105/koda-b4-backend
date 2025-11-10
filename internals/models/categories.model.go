@@ -3,18 +3,22 @@ package models
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Categories struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
+	Id        int       `json:"id"`
+	Name      string    `json:"name" binding:"required,max=20"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func GetListCategories(ctx context.Context, db *pgxpool.Pool, name string, limit, offset int) ([]Categories, error) {
-	sql := `SELECT id, name FROM categories`
+	sql := `SELECT id, name, created_at, updated_at FROM categories`
 
 	args := []interface{}{}
 	argIdx := 1
@@ -40,7 +44,7 @@ func GetListCategories(ctx context.Context, db *pgxpool.Pool, name string, limit
 	var categories []Categories
 	for rows.Next() {
 		var c Categories
-		if err := rows.Scan(&c.Id, &c.Name); err != nil {
+		if err := rows.Scan(&c.Id, &c.Name, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, err
 		}
 		categories = append(categories, c)
@@ -52,4 +56,15 @@ func GetListCategories(ctx context.Context, db *pgxpool.Pool, name string, limit
 
 	return categories, nil
 
+}
+
+func CreateCategory(ctx context.Context, db *pgxpool.Pool, body Categories) (Categories, error) {
+	sql := `INSERT INTO categories (name) VALUES ($1) RETURNING id, name, created_at`
+	values := []any{body.Name}
+	var newCategory Categories
+	if err := db.QueryRow(ctx, sql, values...).Scan(&newCategory.Id, &newCategory.Name, &newCategory.CreatedAt); err != nil {
+		log.Println("Failed to insert Categories, Error :", err)
+		return Categories{}, err
+	}
+	return newCategory, nil
 }
