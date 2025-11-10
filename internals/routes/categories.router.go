@@ -21,4 +21,8 @@ func InitCategoriesRouter(router *gin.Engine, db *pgxpool.Pool) {
 	categoriesRouter.PUT("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.UpdateCategories(ctx, db)
 	})
+
+	categoriesRouter.DELETE("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.DeleteCategories(ctx, db)
+	})
 }
