@@ -12,3 +12,7 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+
+type CategoriesRequest struct {
+	Name string `json:"name"`
+}
