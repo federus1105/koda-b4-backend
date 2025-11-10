@@ -68,3 +68,20 @@ func CreateCategory(ctx context.Context, db *pgxpool.Pool, body Categories) (Cat
 	}
 	return newCategory, nil
 }
+
+func UpdateCategories(ctx context.Context, db *pgxpool.Pool, body Categories, id int) (Categories, error) {
+	sql := `UPDATE categories
+		SET name = $1
+		WHERE id = $2
+		RETURNING id, name, updated_at, created_at`
+
+	var updated Categories
+	err := db.QueryRow(ctx, sql, body.Name, id).Scan(
+		&updated.Id, &updated.Name, &updated.UpdatedAt, &updated.CreatedAt)
+	if err != nil {
+		log.Println("Failed to update category:", err)
+		return Categories{}, fmt.Errorf("category update failed: %w", err)
+	}
+
+	return updated, nil
+}
