@@ -2,12 +2,16 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/models"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -50,5 +54,49 @@ func GetListCategories(ctx *gin.Context, db *pgxpool.Pool) {
 		Success: true,
 		Message: "Get data succesfully",
 		Result:  categories,
+	})
+}
+
+func CreateCategory(ctx *gin.Context, db *pgxpool.Pool) {
+	var input models.Categories
+
+	// --- VALIDATION ---
+	if err := ctx.ShouldBind(&input); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorUserMsg(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid Form format",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	newCategory, err := models.CreateCategory(ctxTimeout, db, input)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Internal server error",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Create Categories Successfully",
+		Result:  newCategory,
 	})
 }
