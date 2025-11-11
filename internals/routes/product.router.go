@@ -10,6 +10,8 @@ import (
 
 func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 	productRouter := router.Group("/admin/product")
+	productRouterother := router.Group("/")
+	productRouterFilter := router.Group("/product")
 
 	productRouter.GET("", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.GetListProduct(ctx, db, rd)
@@ -31,9 +33,13 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 		controllers.GetListImageById(ctx, db)
 	})
 
-	productRouterother := router.Group("/")
+	// ============ CLIENT ROUTER =========
 
 	productRouterother.GET("favorite-product", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetListFavoriteProduct(ctx, db)
+	})
+
+	productRouterFilter.GET("", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.GetListProductFilter(ctx, db)
 	})
 }
