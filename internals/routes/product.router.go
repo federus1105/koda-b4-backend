@@ -30,4 +30,10 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 	productRouter.GET("/:id/images", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.GetListImageById(ctx, db)
 	})
+
+	productRouterother := router.Group("/")
+
+	productRouterother.GET("favorite-product", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.GetListFavoriteProduct(ctx, db)
+	})
 }
