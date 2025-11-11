@@ -27,6 +27,26 @@ func ErrorProductdMsg(fe validator.FieldError) string {
 		default:
 			return field + " must be less than or equal to " + fe.Param()
 		}
+	case "min":
+		switch field {
+		case "Size":
+			return "size must have at least 1 item"
+		case "Variant":
+			return "variant must have at least 1 item"
+		default:
+			return field + " must have at least " + fe.Param() + " item(s)"
+		}
+	case "max":
+		switch field {
+		case "Size":
+			return "size can have at most 3 items"
+		case "Variant":
+			return "variant can have at most 2 items"
+		default:
+			return field + " can have at most " + fe.Param() + " item(s)"
+		}
+	case "gt":
+		return field + " values must be greater than 0"
 	default:
 		return field + " is invalid"
 	}
