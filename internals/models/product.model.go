@@ -6,8 +6,11 @@ import (
 	"log"
 	"mime/multipart"
 	"strings"
+	"time"
 
+	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type Product struct {
@@ -65,7 +68,17 @@ type ProductResponse struct {
 	Stock       int               `json:"stock"`
 }
 
-func GetListProduct(ctx context.Context, db *pgxpool.Pool, name string, limit, offset int) ([]Product, error) {
+func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, name string, limit, offset int) ([]Product, error) {
+	redisKey := "list-product"
+
+	// --- GET CACHE ---
+	if cached, err := libs.GetFromCache[[]Product](ctx, rd, redisKey); err != nil {
+		log.Println("Redis Error:", err)
+	} else if cached != nil && len(*cached) > 0 {
+		log.Printf("Key %s found in cache Served in using Redis 👌", redisKey)
+		return *cached, nil
+	}
+
 	sql := `SELECT pi.photos_one as image,
 	p.id,
 	p.name, 
@@ -109,10 +122,16 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, name string, limit, o
 		return nil, rows.Err()
 	}
 
+	// --- SAVING TO CACHE ---
+	if offset == 0 {
+		if err := libs.SetToCache(ctx, rd, redisKey, products, 1*time.Minute); err != nil {
+			log.Println("Redis Error:", err)
+		}
+	}
 	return products, nil
 }
 
-func CreateProduct(ctx context.Context, db *pgxpool.Pool, body CreateProducts) (CreateProducts, error) {
+func CreateProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body CreateProducts) (CreateProducts, error) {
 	// --- START QUERY TRANSACTION ---
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -167,6 +186,11 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, body CreateProducts) (
 	if err := tx.Commit(ctx); err != nil {
 		log.Println("Failed to commit transaction:", err)
 		return CreateProducts{}, err
+	}
+
+	// --- INVALIDATE ---
+	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product"); err != nil {
+		log.Println("Failed to invalidate product cache:", err)
 	}
 
 	return newProduct, nil
