@@ -13,17 +13,6 @@ ROLE {
     ENUM user
     }
 
-SIZE {
-    ENUM regular
-    ENUM medium
-    ENUM large
-}
-
-VARIANT {
-    ENUM ice
-    ENUM hot
-}
-
 USERS {
     int id
     string email
@@ -42,14 +31,36 @@ ACCOUNT {
     timestamp updatedAt
 }
 
-VARIANT_PRODUCT {
+
+VARIANT_ENUM {
+    ENUM ice
+    ENUM hot
+}
+
+VARIANT {
     int id
     VARIANT name 
 }
 
-SIZE_PRODUCT {
+PRODUCT_VARIANT {
+    int id_variant_product
+    int id_product
+}
+
+SIZE_ENUM {
+    ENUM regular
+    ENUM medium
+    ENUM large
+}
+
+SIZE {
     int id
     SIZE name
+}
+
+PRODUCT_SIZE {
+    int id_size_product
+    int id_product
 }
 
 ORDERS {
@@ -86,6 +97,8 @@ PRODUCT {
     string name
     string description
     int id_product_images
+    int id_size
+    int id_variant
     float rating
     float priceOriginal
     float priceDiscount
@@ -119,7 +132,7 @@ PRODUCT_ORDERS {
     USERS ||--|| ACCOUNT : ""
     CATEGORIES||--o{ PRODUCT_CATEGORIES : ""
 
-    PRODUCT ||--o{PRODUCT_CATEGORIES :""
+    PRODUCT_CATEGORIES ||--o{PRODUCT :""
     
     PAYMENT_METHOD  ||--||ORDERS:""
     ACCOUNT ||--o{ORDERS :""
@@ -129,11 +142,14 @@ PRODUCT_ORDERS {
 
     PRODUCT_IMAGES |o--|{PRODUCT: ""
 
-    ORDERS ||--o{SIZE_PRODUCT: ""
-    ORDERS ||--o{VARIANT_PRODUCT: ""
+    SIZE ||--o{SIZE_ENUM:""
+    PRODUCT_SIZE ||--o{SIZE:""
 
-    SIZE_PRODUCT ||--|{ SIZE:""
-    VARIANT_PRODUCT ||--o{VARIANT:""
+    VARIANT ||--o{VARIANT_ENUM:""
+    PRODUCT_VARIANT||--o{VARIANT:""
+
+    PRODUCT ||--o{PRODUCT_SIZE:""
+    PRODUCT ||--o{PRODUCT_VARIANT:""
 
 ```
 
