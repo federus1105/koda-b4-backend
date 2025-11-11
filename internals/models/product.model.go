@@ -14,12 +14,13 @@ import (
 )
 
 type Product struct {
-	Id          int    `json:"id"`
-	Image       string `json:"image"`
-	Name        string `json:"name"`
-	Price       string `json:"price"`
-	Description string `json:"description"`
-	Stock       string `json:"stock"`
+	Id          int      `json:"id"`
+	Image       string   `json:"image"`
+	Name        string   `json:"name"`
+	Price       string   `json:"price"`
+	Description string   `json:"description"`
+	Stock       string   `json:"stock"`
+	Size        []string `json:"size"`
 }
 
 type CreateProducts struct {
@@ -79,14 +80,22 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 		return *cached, nil
 	}
 
-	sql := `SELECT pi.photos_one as image,
-	p.id,
-	p.name, 
-	p.priceoriginal as price,
-	p.description, 
-	p.stock FROM product p
-	JOIN product_images pi ON pi.id = p.id_product_images
-	WHERE is_deleted = false`
+	sql := `SELECT
+        p.id,
+        p.name,
+        pi.photos_one AS image,
+        p.priceOriginal AS price,
+        p.description,
+        p.stock,
+        s.name AS size
+    FROM product p
+    JOIN product_images pi 
+        ON pi.id = p.id_product_images
+    JOIN size_product sp
+        ON sp.id_product = p.id
+    JOIN sizes s
+        ON s.id = sp.id_size
+    WHERE p.is_deleted = false`
 
 	args := []interface{}{}
 	argIdx := 1
@@ -109,17 +118,46 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 	}
 	defer rows.Close()
 
-	var products []Product
+	productMap := make(map[int]*Product)
 	for rows.Next() {
-		var p Product
-		if err := rows.Scan(&p.Image, &p.Id, &p.Name, &p.Price, &p.Description, &p.Stock); err != nil {
+		var id int
+		var name, image, description string
+		var price float64
+		var stock int
+		var size *string
+
+		if err := rows.Scan(&id, &name, &image, &price, &description, &stock, &size); err != nil {
 			return nil, err
 		}
-		products = append(products, p)
+
+		// -- PARSE TO STRING ---
+		priceStr := fmt.Sprintf("%.0f", price)
+		stockStr := fmt.Sprintf("%d", stock)
+
+		if p, exists := productMap[id]; exists {
+			if size != nil {
+				p.Size = append(p.Size, *size)
+			}
+		} else {
+			newProduct := Product{
+				Id:          id,
+				Name:        name,
+				Image:       image,
+				Price:       priceStr,
+				Description: description,
+				Stock:       stockStr,
+				Size:        []string{},
+			}
+			if size != nil {
+				newProduct.Size = []string{*size}
+			}
+			productMap[id] = &newProduct
+		}
 	}
 
-	if rows.Err() != nil {
-		return nil, rows.Err()
+	products := make([]Product, 0, len(productMap))
+	for _, p := range productMap {
+		products = append(products, *p)
 	}
 
 	// --- SAVING TO CACHE ---
