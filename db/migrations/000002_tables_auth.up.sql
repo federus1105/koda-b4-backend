@@ -10,8 +10,8 @@ CREATE TABLE account (
     id_users INT NOT NULL,
     fullname VARCHAR(50) DEFAULT 'user fullname',
     phoneNumber VARCHAR(12) DEFAULT '081234567890',
-    address VARCHAR(100) NOT NULL,
-    photos VARCHAR(100) NOT NULL,
+    address VARCHAR(100),
+    photos VARCHAR(100),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
