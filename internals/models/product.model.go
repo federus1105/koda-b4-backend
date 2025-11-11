@@ -21,13 +21,6 @@ type Product struct {
 	Description string `json:"description"`
 	Stock       string `json:"stock"`
 }
-type FavoriteProduct struct {
-	Id          int    `json:"id"`
-	Image       string `json:"image"`
-	Name        string `json:"name"`
-	Price       string `json:"price"`
-	Description string `json:"description"`
-}
 
 type CreateProducts struct {
 	Id             int                   `form:"id"`
@@ -87,7 +80,7 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 	}
 
 	sql := `SELECT pi.photos_one as image,
-	fp.id,
+	p.id,
 	p.name, 
 	p.priceoriginal as price,
 	p.description, 
@@ -355,39 +348,4 @@ func DeleteProduct(ctx context.Context, db *pgxpool.Pool, id int) error {
 
 	log.Printf("product with id %d successfully deleted", id)
 	return nil
-}
-
-func GetListFavoriteProduct(ctx context.Context, db *pgxpool.Pool, limit, offset int) ([]FavoriteProduct, error) {
-	sql := `SELECT pi.photos_one as image,
-	p.id,
-	p.name, 
-	p.priceoriginal as price,
-	p.description
- 	FROM product p
-	JOIN product_images pi ON pi.id = p.id_product_images
-	WHERE is_deleted = false AND is_favorite = true
-	LIMIT $1 OFFSET $2`
-
-	// --- EXECUTE QUERY ---
-	rows, err := db.Query(ctx, sql, limit, offset)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer rows.Close()
-
-	var products []FavoriteProduct
-	for rows.Next() {
-		var fp FavoriteProduct
-		if err := rows.Scan(&fp.Image, &fp.Id, &fp.Name, &fp.Price, &fp.Description); err != nil {
-			return nil, err
-		}
-		products = append(products, fp)
-	}
-
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-
-	return products, nil
-
 }
