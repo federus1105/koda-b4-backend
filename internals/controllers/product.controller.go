@@ -213,6 +213,8 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 		Rating:      product.Rating,
 		Description: product.Description,
 		Stock:       product.Stock,
+		Size:        product.Size,
+		Variant:     product.Variant,
 	}
 
 	ctx.JSON(200, models.ResponseSucces{
