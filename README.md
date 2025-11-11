@@ -12,21 +12,25 @@ ROLE {
     ENUM admin
     ENUM user
     }
+
 SIZE {
     ENUM regular
     ENUM medium
     ENUM large
 }
+
 VARIANT {
     ENUM ice
     ENUM hot
 }
+
 USERS {
     int id
     string email
     string password
     ROLE role
     }
+
 ACCOUNT {
     int id
     int id_users
@@ -37,6 +41,17 @@ ACCOUNT {
     timestamp createdAt
     timestamp updatedAt
 }
+
+VARIANT_PRODUCT {
+    int id
+    VARIANT name 
+}
+
+SIZE_PRODUCT {
+    int id
+    SIZE name
+}
+
 ORDERS {
     int id
     int id_account
@@ -44,19 +59,18 @@ ORDERS {
     string fullname
     string address
     string phoneNumber
-    quantity
     DELIVERY delivery
-    string total
+    float total
     boolean status 
-    VARIANT variant
-    SIZE size
-    timestamp
+    timestamp createdAt
 }
+
 PAYMENT_METHOD {
     int id
     string name
     string photos
 }
+
 PRODUCT_IMAGES {
     int id
     string photos_one
@@ -66,6 +80,7 @@ PRODUCT_IMAGES {
     timestamp createdAt
     timestamp updatedAt
 }
+
 PRODUCT {
     int id
     string name
@@ -76,30 +91,37 @@ PRODUCT {
     float priceDiscount
     boolean flash_sale
     int stock
+    boolen is_deleted
+    boolen is_favorite
     timestamp createdAt
     timestamp updatedAt
 }
+
 CATEGORIES {
     int id
     string name
 }
+
 PRODUCT_CATEGORIES {
     int id_product
     int id_categories
 }
+
 PRODUCT_ORDERS {
    int id_product
    int id_order
+   int quantity
+   float subtotal
 }
-    ROLE ||--o{ USERS : "assigned to"
-    USERS ||--|| ACCOUNT : "create an account"
+
+
+    ROLE ||--o{ USERS : ""
+    USERS ||--|| ACCOUNT : ""
     CATEGORIES||--o{ PRODUCT_CATEGORIES : ""
 
-    ORDERS ||--o{SIZE: ""
-    ORDERS ||--o{VARIANT : ""
     PRODUCT ||--o{PRODUCT_CATEGORIES :""
     
-    ORDERS ||--||PAYMENT_METHOD:""
+    PAYMENT_METHOD  ||--||ORDERS:""
     ACCOUNT ||--o{ORDERS :""
 
     ORDERS ||--o{PRODUCT_ORDERS: ""
@@ -107,7 +129,14 @@ PRODUCT_ORDERS {
 
     PRODUCT_IMAGES |o--|{PRODUCT: ""
 
+    ORDERS ||--o{SIZE_PRODUCT: ""
+    ORDERS ||--o{VARIANT_PRODUCT: ""
+
+    SIZE_PRODUCT ||--|{ SIZE:""
+    VARIANT_PRODUCT ||--o{VARIANT:""
+
 ```
+
 ## Redis Cache Overview ⚡
 | Status                 | Description                                                                                        | Response Time | Screenshot                                      |
 | ---------------------- | ------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------- |
