@@ -38,7 +38,7 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 		page = 1
 	}
 
-	limit := 10
+	limit := 30
 	offset := (page - 1) * limit
 	name := ctx.Query("name")
 
