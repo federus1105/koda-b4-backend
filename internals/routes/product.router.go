@@ -25,4 +25,8 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool) {
 	productRouter.POST("/delete/:id", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
 		controllers.DeleteProduct(ctx, db)
 	})
+
+	productRouter.GET("/:id/images", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
+		controllers.GetListImageById(ctx, db)
+	})
 }
