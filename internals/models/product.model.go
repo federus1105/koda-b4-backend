@@ -27,7 +27,7 @@ type CreateProducts struct {
 	Id             int                   `form:"id"`
 	Name           string                `form:"name" binding:"required"`
 	ImageId        int                   `form:"imageId"`
-	Image_one      *multipart.FileHeader `form:"image_one" binding:"required"`
+	Image_one      *multipart.FileHeader `form:"image_one"`
 	Image_two      *multipart.FileHeader `form:"image_two"`
 	Image_three    *multipart.FileHeader `form:"image_three"`
 	Image_four     *multipart.FileHeader `form:"image_four"`
@@ -39,6 +39,8 @@ type CreateProducts struct {
 	Rating         float64               `form:"rating" binding:"required,gte=1,lte=10"`
 	Description    string                `form:"description" binding:"required"`
 	Stock          int                   `form:"stock" binding:"gte=0"`
+	Size           []int                 `form:"size" binding:"gte=1,lte=3"`
+	Variant        []int                 `form:"variant" binding:"gte=1,lte=2"`
 }
 
 type UpdateProducts struct {
@@ -67,6 +69,8 @@ type ProductResponse struct {
 	Rating      float64           `json:"rating"`
 	Description string            `json:"description"`
 	Stock       int               `json:"stock"`
+	Size        []int             `json:"size"`
+	Variant     []int             `json:"variant"`
 }
 
 func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, name string, limit, offset int) ([]Product, error) {
@@ -214,11 +218,37 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body
 		return CreateProducts{}, err
 	}
 
+	// --- INSERT SIZE PRODUCT ---
+	if len(body.Size) > 0 {
+		sizeSQL := `INSERT INTO size_product (id_product, id_size) VALUES ($1, $2)`
+		for _, sizeID := range body.Size {
+			_, err := tx.Exec(ctx, sizeSQL, newProduct.Id, sizeID)
+			if err != nil {
+				log.Println("Failed to insert size product:", err)
+				return CreateProducts{}, err
+			}
+		}
+	}
+
+	// --- INSERT VARIANT PRODUCT ---
+	if len(body.Variant) > 0 {
+		VariantSQL := `INSERT INTO variant_product (id_product, id_variant) VALUES ($1, $2)`
+		for _, VariantID := range body.Variant {
+			_, err := tx.Exec(ctx, VariantSQL, newProduct.Id, VariantID)
+			if err != nil {
+				log.Println("Failed to insert variant product:", err)
+				return CreateProducts{}, err
+			}
+		}
+	}
+
 	// --- ASIGN IMAGE STR TO RETURN STRUCT RESPONSE---
 	newProduct.Image_oneStr = body.Image_oneStr
 	newProduct.Image_twoStr = body.Image_twoStr
 	newProduct.Image_threeStr = body.Image_threeStr
 	newProduct.Image_fourStr = body.Image_fourStr
+	newProduct.Size = body.Size
+	newProduct.Variant = body.Variant
 
 	// --- COMMIT TRANSACTION ---
 	if err := tx.Commit(ctx); err != nil {
