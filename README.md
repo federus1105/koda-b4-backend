@@ -108,6 +108,13 @@ PRODUCT_ORDERS {
     PRODUCT_IMAGES |o--|{PRODUCT: ""
 
 ```
+## Redis Cache Overview ⚡
+| Status                 | Description                                                                                        | Response Time | Screenshot                                      |
+| ---------------------- | ------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------- |
+| **Before Using Cache** | Data is still taken directly from the database, so it takes quite a long time. | ⏳ Slow          | ![alt text](</docs/images/before.png>) |
+| **After Using Cache**  | Data is taken from Redis Cache so the process becomes faster.                  | ⚡ Fast     | ![alt text](</docs/images/after.png>) |
+
+<br>
 
 ## 🚀 Features
 - 🔐 JWT Authentication (Login & Register)
