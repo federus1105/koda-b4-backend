@@ -11,22 +11,20 @@ CREATE TABLE product_images (
     photos_four VARCHAR(255)
 );
 
-CREATE TABLE size_product (
+CREATE TABLE sizes (
     id SERIAL PRIMARY KEY,
     name size NOT NULL
 );
 
-CREATE TABLE variant_product (
+CREATE TABLE variants (
     id SERIAL PRIMARY KEY,
-    name variant not NULL 
+    name variant not NULL
 );
 
 CREATE TABLE product (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     id_product_images INT NOT NULL,
-    id_size_product INT,
-    id_variant_product INT,
     description VARCHAR(255) NOT NULL,
     RATING FLOAT NOT NULL,
     priceOriginal FLOAT NOT NULL,
@@ -37,6 +35,16 @@ CREATE TABLE product (
     is_favorite BOOLEAN DEFAULT FALSE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE variant_product (
+    id_product INT NOT NULL,
+    id_variant int NOT NULL
+);
+
+CREATE TABLE size_product (
+    id_product INT NOT NULL,
+    id_size int NOT NULL
 );
 
 CREATE TABLE product_orders (
@@ -56,11 +64,13 @@ CREATE TABLE product_categories (
     FOREIGN KEY (id_categories) REFERENCES categories(id)
 );
 
-ALTER TABLE product ADD FOREIGN KEY (id_size_product) REFERENCES size_product (id);
-ALTER TABLE product ADD FOREIGN KEY (id_variant_product) REFERENCES variant_product(id);
+ALTER TABLE size_product ADD FOREIGN KEY (id_size) REFERENCES sizes(id);
+ALTER TABLE size_product ADD FOREIGN KEY (id_product) REFERENCES product(id);
+ALTER TABLE variant_product ADD FOREIGN KEY (id_variant) REFERENCES variants(id);
+ALTER TABLE variant_product ADD FOREIGN KEY (id_product) REFERENCES product(id);
 ALTER TABLE product ADD FOREIGN KEY (id_product_images) REFERENCES product_images(id);
 ALTER TABLE product_orders ADD FOREIGN KEY (id_order) REFERENCES orders(id);
 ALTER TABLE product_orders ADD FOREIGN KEY (id_product) REFERENCES product(id);
 ALTER TABLE product_categories ADD FOREIGN KEY (id_categories) REFERENCES categories(id);
-ALTER TABLE product_categories ADD FOREIGN KEY (id_product) REFERENCES product(id)
+ALTER TABLE product_categories ADD FOREIGN KEY (id_product) REFERENCES product(id);
 
