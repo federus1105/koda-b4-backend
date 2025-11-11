@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -31,10 +33,23 @@ func main() {
 		log.Println("❌ Failed to connect to database\nCause: ", err.Error())
 		return
 	}
-	
+
 	defer db.Close()
 	log.Println("✅ DB Connected")
 
-	router := routes.InitRouter(db)
+	// --- INIT RDB ---
+	rdb, Rdb, err := configs.InitRedis()
+	if err != nil {
+		log.Println("❌ Failed to connect to redis\nCause: ", err.Error())
+		return
+	}
+	defer rdb.Close()
+	if _, err := rdb.Ping(context.Background()).Result(); err != nil {
+		fmt.Println("Failed Connected Redis : ", err.Error())
+		return
+	}
+	log.Println("✅ REDIS Connected: ", Rdb)
+
+	router := routes.InitRouter(db, rdb)
 	router.Run("localhost:8011")
 }
