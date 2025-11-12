@@ -27,12 +27,13 @@ type CartItemResponse struct {
 }
 
 type Card struct {
-	Id       int    `json:"id"`
-	Image    string `json:"images"`
-	Name     string `json:"name"`
-	Quantity int    `json:"qty"`
-	Size     string `json:"size"`
-	Variant  string `json:"variant"`
+	Id       int     `json:"id"`
+	Image    string  `json:"images"`
+	Name     string  `json:"name"`
+	Quantity int     `json:"qty"`
+	Size     string  `json:"size"`
+	Variant  string  `json:"variant"`
+	Subtotal float64 `json:"subtotal"`
 }
 
 func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, input CartItemRequest) (*CartItemResponse, error) {
@@ -71,12 +72,20 @@ func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, inp
 }
 
 func GetCartProduct(ctx context.Context, db *pgxpool.Pool, UserID int) ([]Card, error) {
-	sql := `SELECT c.id, p.name, pi.photos_one, c.quantity, s.name, v.name FROM cart c
-	JOIN sizes s ON s.id = c.size_id
-	JOIN variants v ON v.id = c.variant_id
-	JOIN product p ON p.id = c.product_id
-	JOIN  product_images pi ON p.id_product_images = pi.id
-	WHERE c.account_id = $1;`
+	sql := `SELECT 
+    c.id, 
+    p.name, 
+    pi.photos_one, 
+    c.quantity, 
+    s.name AS size, 
+    v.name AS variant,
+    (p.priceoriginal * c.quantity) AS subtotal
+FROM cart c
+JOIN sizes s ON s.id = c.size_id
+JOIN variants v ON v.id = c.variant_id
+JOIN product p ON p.id = c.product_id
+JOIN product_images pi ON p.id_product_images = pi.id
+WHERE c.account_id = $1;`
 
 	rows, err := db.Query(ctx, sql, UserID)
 	if err != nil {
@@ -87,7 +96,7 @@ func GetCartProduct(ctx context.Context, db *pgxpool.Pool, UserID int) ([]Card, 
 	var carts []Card
 	for rows.Next() {
 		var c Card
-		if err := rows.Scan(&c.Id, &c.Name, &c.Image, &c.Quantity, &c.Size, &c.Variant); err != nil {
+		if err := rows.Scan(&c.Id, &c.Name, &c.Image, &c.Quantity, &c.Size, &c.Variant, &c.Subtotal); err != nil {
 			return nil, err
 		}
 		carts = append(carts, c)
