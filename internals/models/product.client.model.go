@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -199,10 +199,10 @@ func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (Produ
 
 	// --- APPEND IMAGES TO SLICE IMAGES ---
 	product.Images = []string{
-		utils.StringOrEmpty(product.ImageOne),
-		utils.StringOrEmpty(product.ImageTwo),
-		utils.StringOrEmpty(product.ImageThree),
-		utils.StringOrEmpty(product.ImageFour),
+		libs.StringOrEmpty(product.ImageOne),
+		libs.StringOrEmpty(product.ImageTwo),
+		libs.StringOrEmpty(product.ImageThree),
+		libs.StringOrEmpty(product.ImageFour),
 	}
 
 	// --- GET SIZE ---
