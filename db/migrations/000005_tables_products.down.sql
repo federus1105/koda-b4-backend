@@ -5,7 +5,10 @@ ALTER TABLE product_categories DROP CONSTRAINT IF EXISTS "product_categories_id_
 ALTER TABLE product_categories DROP CONSTRAINT IF EXISTS "product_categories_id_product_fkey";
 ALTER TABLE product DROP CONSTRAINT IF EXISTS "product_id_size_product_fkey";
 ALTER TABLE product DROP CONSTRAINT IF EXISTS "product_id_variant_product_fkey";
+ALTER TABLE cart DROP CONSTRAINT IF EXISTS "product_id_cart_fkey";
+ALTER TABLE cart DROP CONSTRAINT IF EXISTS "account_id_cart_fkey";
 
+DROP TABLE IF EXISTS cart;
 DROP TABLE IF EXISTS product_orders;
 DROP TABLE IF EXISTS product_categories;
 DROP TABLE IF EXISTS variant_product;
