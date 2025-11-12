@@ -3,11 +3,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/models"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -123,5 +125,44 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 		"success": true,
 		"message": "Get data successfully",
 		"result":  products,
+	})
+}
+
+func GetProductById(ctx *gin.Context, db *pgxpool.Pool) {
+	// --- GET PORDUCT ID ---
+	productIDstr := ctx.Param("id")
+	productID, err := strconv.Atoi(productIDstr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "Invalid product id",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	product, err := models.GetProductById(ctxTimeout, db, productID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "product not found",
+			})
+			return
+		}
+		log.Println("Failed to get product:", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "failed to get product",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Get Data succesfully",
+		Result:  product,
 	})
 }
