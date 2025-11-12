@@ -42,4 +42,8 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 	productRouterFilter.GET("", middlewares.VerifyToken, func(ctx *gin.Context) {
 		controllers.GetListProductFilter(ctx, db)
 	})
+
+	productRouterFilter.GET("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {
+		controllers.GetProductById(ctx, db)
+	})
 }
