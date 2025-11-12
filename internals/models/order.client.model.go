@@ -99,7 +99,7 @@ WHERE c.account_id = $1;`
 	}
 	defer rows.Close()
 
-	var carts []Card
+	carts := []Card{}
 	for rows.Next() {
 		var c Card
 		if err := rows.Scan(
