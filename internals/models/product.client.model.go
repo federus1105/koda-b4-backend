@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -14,6 +15,22 @@ type FavoriteProduct struct {
 	Name        string `json:"name"`
 	Price       string `json:"price"`
 	Description string `json:"description"`
+}
+
+type ProductClient struct {
+	ImageOne      *string  `json:"-"`
+	ImageTwo      *string  `json:"-"`
+	ImageThree    *string  `json:"-"`
+	ImageFour     *string  `json:"-"`
+	Images        []string `json:"images"`
+	Name          string   `json:"name"`
+	Price         string   `json:"price"`
+	PriceDiscount *string  `json:"priceDiscount"`
+	Rating        string   `json:"rating"`
+	Description   string   `json:"desc"`
+	Stock         int      `json:"stock"`
+	Size          []string `json:"sizes"`
+	Variant       []string `json:"variant"`
 }
 
 func GetListFavoriteProduct(ctx context.Context, db *pgxpool.Pool, limit, offset int) ([]FavoriteProduct, error) {
@@ -141,4 +158,81 @@ WHERE p.is_deleted = false
 	}
 
 	return products, nil
+}
+
+func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (ProductClient, error) {
+	var product ProductClient
+
+	// --- QUERY ----
+	err := db.QueryRow(ctx, `
+        SELECT p.name, p.priceoriginal, p.priceDiscount, p.rating, p.description, p.stock,
+               pi.photos_one, pi.photos_two, pi.photos_three, pi.photos_four
+        FROM product p
+        JOIN product_images pi ON p.id_product_images = pi.id
+        WHERE p.id=$1
+    `, productId).Scan(
+		&product.Name,
+		&product.Price,
+		&product.PriceDiscount,
+		&product.Rating,
+		&product.Description,
+		&product.Stock,
+		&product.ImageOne,
+		&product.ImageTwo,
+		&product.ImageThree,
+		&product.ImageFour,
+	)
+	if err != nil {
+		return ProductClient{}, err
+	}
+
+	// --- APPEND IMAGES TO SLICE IMAGES ---
+	product.Images = []string{
+		utils.StringOrEmpty(product.ImageOne),
+		utils.StringOrEmpty(product.ImageTwo),
+		utils.StringOrEmpty(product.ImageThree),
+		utils.StringOrEmpty(product.ImageFour),
+	}
+
+	// --- GET SIZE ---
+	rows, err := db.Query(ctx, `
+        SELECT s.name
+        FROM size_product sp
+        JOIN sizes s ON sp.id_size = s.id
+        WHERE sp.id_product=$1
+    `, productId)
+	if err != nil {
+		return ProductClient{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var size string
+		if err := rows.Scan(&size); err != nil {
+			return ProductClient{}, err
+		}
+		product.Size = append(product.Size, size)
+	}
+
+	// --- GET VARIANT ----
+	rowsVariant, err := db.Query(ctx, `
+        SELECT v.name
+        FROM variant_product vp
+        JOIN variants v ON vp.id_variant = v.id
+        WHERE vp.id_product=$1
+    `, productId)
+	if err != nil {
+		return ProductClient{}, err
+	}
+	defer rowsVariant.Close()
+
+	for rowsVariant.Next() {
+		var variant string
+		if err := rowsVariant.Scan(&variant); err != nil {
+			return ProductClient{}, err
+		}
+		product.Variant = append(product.Variant, variant)
+	}
+
+	return product, nil
 }
