@@ -39,8 +39,8 @@ type CreateProducts struct {
 	Rating         float64               `form:"rating" binding:"required,gte=1,lte=10"`
 	Description    string                `form:"description" binding:"required"`
 	Stock          int                   `form:"stock" binding:"gte=0"`
-	Size           []int                 `form:"size" binding:"max=3,dive,gt=0"`
-	Variant        []int                 `form:"variant" binding:"max=2,dive,gt=0"`
+	Size           []int                 `form:"size,omitempty" binding:"max=3,dive,gt=0"`
+	Variant        []int                 `form:"variant,omitempty" binding:"max=2,dive,gt=0"`
 }
 
 type UpdateProducts struct {
@@ -69,8 +69,8 @@ type ProductResponse struct {
 	Rating      float64           `json:"rating"`
 	Description string            `json:"description"`
 	Stock       int               `json:"stock"`
-	Size        []int             `json:"size"`
-	Variant     []int             `json:"variant"`
+	Size        []int             `json:"size,omitempty"`
+	Variant     []int             `json:"variant,omitempty"`
 }
 
 func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, name string, limit, offset int) ([]Product, error) {
