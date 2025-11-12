@@ -26,6 +26,15 @@ type CartItemResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Card struct {
+	Id       int    `json:"id"`
+	Image    string `json:"images"`
+	Name     string `json:"name"`
+	Quantity int    `json:"qty"`
+	Size     string `json:"size"`
+	Variant  string `json:"variant"`
+}
+
 func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, input CartItemRequest) (*CartItemResponse, error) {
 	sql := `INSERT INTO cart (account_id, product_id, size_id, variant_id, quantity)
 		VALUES ($1, $2, $3, $4, $5)
@@ -59,4 +68,33 @@ func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, inp
 	}
 
 	return &item, nil
+}
+
+func GetCartProduct(ctx context.Context, db *pgxpool.Pool, UserID int) ([]Card, error) {
+	sql := `SELECT c.id, p.name, pi.photos_one, c.quantity, s.name, v.name FROM cart c
+	JOIN sizes s ON s.id = c.size_id
+	JOIN variants v ON v.id = c.variant_id
+	JOIN product p ON p.id = c.product_id
+	JOIN  product_images pi ON p.id_product_images = pi.id
+	WHERE c.account_id = $1;`
+
+	rows, err := db.Query(ctx, sql, UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var carts []Card
+	for rows.Next() {
+		var c Card
+		if err := rows.Scan(&c.Id, &c.Name, &c.Image, &c.Quantity, &c.Size, &c.Variant); err != nil {
+			return nil, err
+		}
+		carts = append(carts, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return carts, nil
 }
