@@ -54,20 +54,22 @@ func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber, Status str
 	var p OrderList
 	var productsJSON []byte
 
-	sql := `SELECT 
-	'#ORD-' || LPAD(o.id::text, 3, '0') AS order_number,
+	sql := `
+SELECT 
+    '#ORD-' || LPAD(o.id::text, 3, '0') AS order_number,
     o.createdAt,
     o.status,
     o.total,
-	JSON_AGG(
-			JSON_BUILD_OBJECT(
-				'name', p.name,
-				'quantity', o.quantity
-			)
-		) AS order_items
-	FROM orders o
-	JOIN product_orders po ON po.id_order = o.id
-	JOIN product p ON p.id = po.id_product`
+    JSON_AGG(
+        JSON_BUILD_OBJECT(
+            'name', p.name,
+            'quantity', po.quantity
+        )
+    ) AS order_items
+FROM orders o
+JOIN product_orders po ON po.id_order = o.id
+JOIN product p ON p.id = po.id_product
+`
 
 	// --- SQL DINAMIS ---
 	whereClauses := []string{}
@@ -141,14 +143,14 @@ func GetDetailOrder(ctx context.Context, db *pgxpool.Pool, OrderID int) (OrderDe
     o.address,
     o.phonenumber,
 	pm.name AS payment_method,
-    o.delivery,
+    d.name,
     o.status,
     o.total,
     JSON_AGG(
         JSON_BUILD_OBJECT(
-            'quantity', o.quantity,
-            'size', o.size,
-            'variant', o.variant,
+            'quantity', po.quantity,
+            'size', po.size,
+            'variant', po.variant,
             'product_name', p.name,
             'price_original', p.priceoriginal,
             'price_discount', p.pricediscount
@@ -158,8 +160,9 @@ func GetDetailOrder(ctx context.Context, db *pgxpool.Pool, OrderID int) (OrderDe
 	JOIN payment_method pm ON pm.id = o.id_paymentmethod
 	JOIN product_orders po ON po.id_order = o.id
 	JOIN product p ON p.id = po.id_product
+    JOIN delivery d ON d.id = o.id_delivery
 	WHERE o.id = $1
-	GROUP BY o.id, o.fullname, o.address, o.phonenumber, pm.name, o.delivery, o.status, o.total`
+	GROUP BY o.id, o.fullname, o.address, o.phonenumber, pm.name, d.name, o.status, o.total`
 
 	err := db.QueryRow(ctx, sql, OrderID).Scan(
 		&order.OrderNumber,
