@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/middlewares"
@@ -55,7 +55,7 @@ func CreateCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- CALL MODEL FUNCTION ---
 	newCartItem, err := models.CreateCartProduct(ctxTimeout, db, userID, input)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{
+		ctx.JSON(500, models.Response{
 			Success: false,
 			Message: "Internal server error",
 		})
@@ -64,9 +64,49 @@ func CreateCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	}
 
 	// --- SUCCESS RESPONSE ---
-	ctx.JSON(http.StatusOK, models.ResponseSucces{
+	ctx.JSON(200, models.ResponseSucces{
 		Success: true,
 		Message: "Product added to cart successfully",
 		Result:  newCartItem,
+	})
+}
+
+func GetCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
+	userIDRaw, exists := ctx.Get(middlewares.UserIDKey)
+	// --- CHECKING IN CONTEXT ---
+	if !exists {
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "User ID not found in context",
+		})
+		return
+	}
+
+	userID, ok := userIDRaw.(int)
+	if !ok {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "User ID in context is invalid",
+		})
+		return
+	}
+
+	// --- LIMIT EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	carts, err := models.GetCartProduct(ctxTimeout, db, userID)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed get data carts",
+		})
+		fmt.Println(err.Error())
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Cart data retrieved successfully",
+		Result:  carts,
 	})
 }
