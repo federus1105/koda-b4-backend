@@ -127,3 +127,82 @@ func GetCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		Result:  carts,
 	})
 }
+
+func Transactions(ctx *gin.Context, db *pgxpool.Pool) {
+	var input models.TransactionsInput
+
+	// --- VALIDATION ---
+	if err := ctx.ShouldBind(&input); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorMessage(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid JSON format",
+		})
+		return
+	}
+
+	// --- GET USER IN CONTEXT ---
+	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
+	if !exists {
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Unauthorized: user not logged in",
+		})
+		return
+	}
+
+	var userID int
+	switch v := userIDInterface.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	default:
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Invalid user ID type in context",
+		})
+		return
+	}
+
+	// --- LIMIT EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// --- CALL MODEL FUNCTION ---
+	result, err := models.Transactions(ctxTimeout, db, input, userID)
+	if err != nil {
+		var ve utils.ValidationError
+		if errors.As(err, &ve) {
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: ve.Error(),
+			})
+			return
+		}
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: err.Error(),
+		})
+		log.Println(err.Error())
+		return
+	}
+	// --- SUCCESS RESPONSE ---
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Transaction completed successfully",
+		Result:  result,
+	})
+}
