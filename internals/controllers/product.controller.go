@@ -98,7 +98,7 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 		if errors.As(err, &ve) {
 			var msgs []string
 			for _, fe := range ve {
-				msgs = append(msgs, utils.ErrorProductdMsg(fe))
+				msgs = append(msgs, utils.ErrorMessage(fe))
 			}
 			ctx.JSON(400, models.Response{
 				Success: false,
@@ -261,7 +261,7 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		if errors.As(err, &ve) {
 			var msgs []string
 			for _, fe := range ve {
-				msgs = append(msgs, utils.ErrorProductdMsg(fe))
+				msgs = append(msgs, utils.ErrorMessage(fe))
 			}
 			ctx.JSON(400, models.Response{
 				Success: false,
@@ -372,6 +372,8 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		"description": product.Description,
 		"stock":       product.Stock,
 		"images":      map[string]string{},
+		"size":        product.Size,
+		"variant":     product.Variant,
 	}
 
 	images := map[string]string{}
