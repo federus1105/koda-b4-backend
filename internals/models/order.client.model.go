@@ -9,10 +9,10 @@ import (
 )
 
 type CartItemRequest struct {
-	ProductID int `json:"product_id"`
-	SizeID    int `json:"size"`
-	VariantID int `json:"variant"`
-	Quantity  int `json:"quantity"`
+	ProductID int `json:"product_id" binding:"gt=0"`
+	SizeID    int `json:"size" binding:"gt=0,lte=3"`
+	VariantID int `json:"variant" binding:"gt=0,lte=2"`
+	Quantity  int `json:"quantity" binding:"gt=0"`
 }
 
 type CartItemResponse struct {
