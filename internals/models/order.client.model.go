@@ -27,13 +27,16 @@ type CartItemResponse struct {
 }
 
 type Card struct {
-	Id       int     `json:"id"`
-	Image    string  `json:"images"`
-	Name     string  `json:"name"`
-	Quantity int     `json:"qty"`
-	Size     string  `json:"size"`
-	Variant  string  `json:"variant"`
-	Subtotal float64 `json:"subtotal"`
+	Id            int     `json:"id"`
+	Image         string  `json:"images"`
+	Name          string  `json:"name"`
+	Quantity      int     `json:"qty"`
+	Size          string  `json:"size"`
+	Variant       string  `json:"variant"`
+	Price         float64 `json:"price"`
+	PriceDiscount float64 `json:"discount"`
+	FlashSale     bool    `json:"flash_sale"`
+	Subtotal      float64 `json:"subtotal"`
 }
 
 func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, input CartItemRequest) (*CartItemResponse, error) {
@@ -75,6 +78,9 @@ func GetCartProduct(ctx context.Context, db *pgxpool.Pool, UserID int) ([]Card, 
 	sql := `SELECT 
     c.id, 
     p.name, 
+    p.priceoriginal,
+    p.pricediscount,
+    p.flash_sale,
     pi.photos_one, 
     c.quantity, 
     s.name AS size, 
@@ -96,7 +102,17 @@ WHERE c.account_id = $1;`
 	var carts []Card
 	for rows.Next() {
 		var c Card
-		if err := rows.Scan(&c.Id, &c.Name, &c.Image, &c.Quantity, &c.Size, &c.Variant, &c.Subtotal); err != nil {
+		if err := rows.Scan(
+			&c.Id,
+			&c.Name,
+			&c.Price,
+			&c.PriceDiscount,
+			&c.FlashSale,
+			&c.Image,
+			&c.Quantity,
+			&c.Size,
+			&c.Variant,
+			&c.Subtotal); err != nil {
 			return nil, err
 		}
 		carts = append(carts, c)
