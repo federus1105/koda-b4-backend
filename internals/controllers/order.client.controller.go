@@ -2,13 +2,17 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/middlewares"
 	"github.com/federus1105/koda-b4-backend/internals/models"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,9 +21,22 @@ func CreateCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 
 	// --- VALIDATION ---
 	if err := ctx.ShouldBindJSON(&input); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorMessage(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
 		ctx.JSON(400, models.Response{
 			Success: false,
-			Message: "invalid Input Json",
+			Message: "invalid JSON format",
 		})
 		return
 	}
