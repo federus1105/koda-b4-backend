@@ -56,6 +56,17 @@ func ErrorMessage(fe validator.FieldError) string {
 		}
 	}
 
+	// --- Custom messages per field + tag (Phone/User) ---
+	switch field {
+	case "Phone":
+		if tag == "len" {
+			return "phone must be exactly 12 digits"
+		}
+		if tag == "numeric" {
+			return "phone must contain only numbers"
+		}
+	}
+
 	// --- Default messages ---
 	switch tag {
 	case "required":
