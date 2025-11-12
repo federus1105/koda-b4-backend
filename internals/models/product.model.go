@@ -6,24 +6,28 @@ import (
 	"log"
 	"mime/multipart"
 	"strings"
+	"time"
 
+	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type Product struct {
-	Id          int    `json:"id"`
-	Image       string `json:"image"`
-	Name        string `json:"name"`
-	Price       string `json:"price"`
-	Description string `json:"description"`
-	Stock       string `json:"stock"`
+	Id          int      `json:"id"`
+	Image       string   `json:"image"`
+	Name        string   `json:"name"`
+	Price       string   `json:"price"`
+	Description string   `json:"description"`
+	Stock       string   `json:"stock"`
+	Size        []string `json:"size"`
 }
 
 type CreateProducts struct {
 	Id             int                   `form:"id"`
 	Name           string                `form:"name" binding:"required"`
 	ImageId        int                   `form:"imageId"`
-	Image_one      *multipart.FileHeader `form:"image_one" binding:"required"`
+	Image_one      *multipart.FileHeader `form:"image_one"`
 	Image_two      *multipart.FileHeader `form:"image_two"`
 	Image_three    *multipart.FileHeader `form:"image_three"`
 	Image_four     *multipart.FileHeader `form:"image_four"`
@@ -35,6 +39,8 @@ type CreateProducts struct {
 	Rating         float64               `form:"rating" binding:"required,gte=1,lte=10"`
 	Description    string                `form:"description" binding:"required"`
 	Stock          int                   `form:"stock" binding:"gte=0"`
+	Size           []int                 `form:"size,omitempty" binding:"max=3,dive,gt=0"`
+	Variant        []int                 `form:"variant,omitempty" binding:"max=2,dive,gt=0"`
 }
 
 type UpdateProducts struct {
@@ -63,17 +69,37 @@ type ProductResponse struct {
 	Rating      float64           `json:"rating"`
 	Description string            `json:"description"`
 	Stock       int               `json:"stock"`
+	Size        []int             `json:"size,omitempty"`
+	Variant     []int             `json:"variant,omitempty"`
 }
 
-func GetListProduct(ctx context.Context, db *pgxpool.Pool, name string, limit, offset int) ([]Product, error) {
-	sql := `SELECT pi.photos_one as image,
-	p.id,
-	p.name, 
-	p.priceoriginal as price,
-	p.description, 
-	p.stock FROM product p
-	JOIN product_images pi ON pi.id = p.id_product_images
-	WHERE is_deleted = false`
+func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, name string, limit, offset int) ([]Product, error) {
+	redisKey := "list-product"
+
+	// --- GET CACHE ---
+	if cached, err := libs.GetFromCache[[]Product](ctx, rd, redisKey); err != nil {
+		log.Println("Redis Error:", err)
+	} else if cached != nil && len(*cached) > 0 {
+		log.Printf("Key %s found in cache Served in using Redis 👌", redisKey)
+		return *cached, nil
+	}
+
+	sql := `SELECT
+        p.id,
+        p.name,
+        pi.photos_one AS image,
+        p.priceOriginal AS price,
+        p.description,
+        p.stock,
+        s.name AS size
+    FROM product p
+    JOIN product_images pi 
+        ON pi.id = p.id_product_images
+    JOIN size_product sp
+        ON sp.id_product = p.id
+    JOIN sizes s
+        ON s.id = sp.id_size
+    WHERE p.is_deleted = false`
 
 	args := []interface{}{}
 	argIdx := 1
@@ -96,23 +122,58 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, name string, limit, o
 	}
 	defer rows.Close()
 
-	var products []Product
+	productMap := make(map[int]*Product)
 	for rows.Next() {
-		var p Product
-		if err := rows.Scan(&p.Image, &p.Id, &p.Name, &p.Price, &p.Description, &p.Stock); err != nil {
+		var id int
+		var name, image, description string
+		var price float64
+		var stock int
+		var size *string
+
+		if err := rows.Scan(&id, &name, &image, &price, &description, &stock, &size); err != nil {
 			return nil, err
 		}
-		products = append(products, p)
+
+		// -- PARSE TO STRING ---
+		priceStr := fmt.Sprintf("%.0f", price)
+		stockStr := fmt.Sprintf("%d", stock)
+
+		if p, exists := productMap[id]; exists {
+			if size != nil {
+				p.Size = append(p.Size, *size)
+			}
+		} else {
+			newProduct := Product{
+				Id:          id,
+				Name:        name,
+				Image:       image,
+				Price:       priceStr,
+				Description: description,
+				Stock:       stockStr,
+				Size:        []string{},
+			}
+			if size != nil {
+				newProduct.Size = []string{*size}
+			}
+			productMap[id] = &newProduct
+		}
 	}
 
-	if rows.Err() != nil {
-		return nil, rows.Err()
+	products := make([]Product, 0, len(productMap))
+	for _, p := range productMap {
+		products = append(products, *p)
 	}
 
+	// --- SAVING TO CACHE ---
+	if offset == 0 {
+		if err := libs.SetToCache(ctx, rd, redisKey, products, 1*time.Minute); err != nil {
+			log.Println("Redis Error:", err)
+		}
+	}
 	return products, nil
 }
 
-func CreateProduct(ctx context.Context, db *pgxpool.Pool, body CreateProducts) (CreateProducts, error) {
+func CreateProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body CreateProducts) (CreateProducts, error) {
 	// --- START QUERY TRANSACTION ---
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -157,16 +218,47 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, body CreateProducts) (
 		return CreateProducts{}, err
 	}
 
+	// --- INSERT SIZE PRODUCT ---
+	if len(body.Size) > 0 {
+		sizeSQL := `INSERT INTO size_product (id_product, id_size) VALUES ($1, $2)`
+		for _, sizeID := range body.Size {
+			_, err := tx.Exec(ctx, sizeSQL, newProduct.Id, sizeID)
+			if err != nil {
+				log.Println("Failed to insert size product:", err)
+				return CreateProducts{}, err
+			}
+		}
+	}
+
+	// --- INSERT VARIANT PRODUCT ---
+	if len(body.Variant) > 0 {
+		VariantSQL := `INSERT INTO variant_product (id_product, id_variant) VALUES ($1, $2)`
+		for _, VariantID := range body.Variant {
+			_, err := tx.Exec(ctx, VariantSQL, newProduct.Id, VariantID)
+			if err != nil {
+				log.Println("Failed to insert variant product:", err)
+				return CreateProducts{}, err
+			}
+		}
+	}
+
 	// --- ASIGN IMAGE STR TO RETURN STRUCT RESPONSE---
 	newProduct.Image_oneStr = body.Image_oneStr
 	newProduct.Image_twoStr = body.Image_twoStr
 	newProduct.Image_threeStr = body.Image_threeStr
 	newProduct.Image_fourStr = body.Image_fourStr
+	newProduct.Size = body.Size
+	newProduct.Variant = body.Variant
 
 	// --- COMMIT TRANSACTION ---
 	if err := tx.Commit(ctx); err != nil {
 		log.Println("Failed to commit transaction:", err)
 		return CreateProducts{}, err
+	}
+
+	// --- INVALIDATE ---
+	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product"); err != nil {
+		log.Println("Failed to invalidate product cache:", err)
 	}
 
 	return newProduct, nil

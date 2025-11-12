@@ -5,12 +5,9 @@ CREATE TABLE orders (
     fullname VARCHAR(100) NOT NULL,
     address VARCHAR(100) NOT NULL,
     phoneNumber VARCHAR(100) NOT NULL,
-    quantity FLOAT NOT NULL,
     delivery delivery NOT NULL,
     total FLOAT NOT NULL,
     status BOOLEAN NOT NULL,
-    variant variant,
-    size size,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

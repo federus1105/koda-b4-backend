@@ -12,21 +12,14 @@ ROLE {
     ENUM admin
     ENUM user
     }
-SIZE {
-    ENUM regular
-    ENUM medium
-    ENUM large
-}
-VARIANT {
-    ENUM ice
-    ENUM hot
-}
+
 USERS {
     int id
     string email
     string password
     ROLE role
     }
+
 ACCOUNT {
     int id
     int id_users
@@ -37,6 +30,39 @@ ACCOUNT {
     timestamp createdAt
     timestamp updatedAt
 }
+
+
+VARIANT_ENUM {
+    ENUM ice
+    ENUM hot
+}
+
+VARIANT {
+    int id
+    VARIANT name 
+}
+
+PRODUCT_VARIANT {
+    int id_variant_product
+    int id_product
+}
+
+SIZE_ENUM {
+    ENUM regular
+    ENUM medium
+    ENUM large
+}
+
+SIZE {
+    int id
+    SIZE name
+}
+
+PRODUCT_SIZE {
+    int id_size_product
+    int id_product
+}
+
 ORDERS {
     int id
     int id_account
@@ -44,19 +70,18 @@ ORDERS {
     string fullname
     string address
     string phoneNumber
-    quantity
     DELIVERY delivery
-    string total
+    float total
     boolean status 
-    VARIANT variant
-    SIZE size
-    timestamp
+    timestamp createdAt
 }
+
 PAYMENT_METHOD {
     int id
     string name
     string photos
 }
+
 PRODUCT_IMAGES {
     int id
     string photos_one
@@ -66,40 +91,50 @@ PRODUCT_IMAGES {
     timestamp createdAt
     timestamp updatedAt
 }
+
 PRODUCT {
     int id
     string name
     string description
     int id_product_images
+    int id_size
+    int id_variant
     float rating
     float priceOriginal
     float priceDiscount
     boolean flash_sale
     int stock
+    boolen is_deleted
+    boolen is_favorite
     timestamp createdAt
     timestamp updatedAt
 }
+
 CATEGORIES {
     int id
     string name
 }
+
 PRODUCT_CATEGORIES {
     int id_product
     int id_categories
 }
+
 PRODUCT_ORDERS {
    int id_product
    int id_order
+   int quantity
+   float subtotal
 }
-    ROLE ||--o{ USERS : "assigned to"
-    USERS ||--|| ACCOUNT : "create an account"
+
+
+    ROLE ||--o{ USERS : ""
+    USERS ||--|| ACCOUNT : ""
     CATEGORIES||--o{ PRODUCT_CATEGORIES : ""
 
-    ORDERS ||--o{SIZE: ""
-    ORDERS ||--o{VARIANT : ""
-    PRODUCT ||--o{PRODUCT_CATEGORIES :""
+    PRODUCT_CATEGORIES ||--o{PRODUCT :""
     
-    ORDERS ||--||PAYMENT_METHOD:""
+    PAYMENT_METHOD  ||--||ORDERS:""
     ACCOUNT ||--o{ORDERS :""
 
     ORDERS ||--o{PRODUCT_ORDERS: ""
@@ -107,7 +142,24 @@ PRODUCT_ORDERS {
 
     PRODUCT_IMAGES |o--|{PRODUCT: ""
 
+    SIZE ||--o{SIZE_ENUM:""
+    PRODUCT_SIZE ||--o{SIZE:""
+
+    VARIANT ||--o{VARIANT_ENUM:""
+    PRODUCT_VARIANT||--o{VARIANT:""
+
+    PRODUCT ||--o{PRODUCT_SIZE:""
+    PRODUCT ||--o{PRODUCT_VARIANT:""
+
 ```
+
+## Redis Cache Overview ⚡
+| Status                 | Description                                                                                        | Response Time | Screenshot                                      |
+| ---------------------- | ------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------- |
+| **Before Using Cache** | Data is still taken directly from the database, so it takes quite a long time. | ⏳ Slow          | ![alt text](</docs/images/before.png>) |
+| **After Using Cache**  | Data is taken from Redis Cache so the process becomes faster.                  | ⚡ Fast     | ![alt text](</docs/images/after.png>) |
+
+<br>
 
 ## 🚀 Features
 - 🔐 JWT Authentication (Login & Register)

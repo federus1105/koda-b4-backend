@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // GetListProduct godoc
@@ -29,7 +30,7 @@ import (
 // @Success 200 {object} models.ResponseSucces
 // @Router /admin/product [get]
 // @Security BearerAuth
-func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
+func GetListProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
 	page, err := strconv.Atoi(pageStr)
@@ -37,14 +38,14 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		page = 1
 	}
 
-	limit := 10
+	limit := 30
 	offset := (page - 1) * limit
 	name := ctx.Query("name")
 
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	products, err := models.GetListProduct(ctxTimeout, db, name, limit, offset)
+	products, err := models.GetListProduct(ctxTimeout, db, rd, name, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
 			Success: false,
@@ -88,7 +89,7 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool) {
 // @Success 200 {object} models.ResponseSucces
 // @Router /admin/product [post]
 // @Security BearerAuth
-func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
+func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 	var body models.CreateProducts
 
 	// --- VALIDATION ---
@@ -177,7 +178,7 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	product, err := models.CreateProduct(ctxTimeout, db, body)
+	product, err := models.CreateProduct(ctxTimeout, db, rd, body)
 	if err != nil {
 		log.Println("ERROR : ", err)
 		ctx.JSON(500, models.Response{
@@ -212,6 +213,8 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		Rating:      product.Rating,
 		Description: product.Description,
 		Stock:       product.Stock,
+		Size:        product.Size,
+		Variant:     product.Variant,
 	}
 
 	ctx.JSON(200, models.ResponseSucces{
