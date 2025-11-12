@@ -17,4 +17,8 @@ func InitOrderClientRoutes(router *gin.Engine, db *pgxpool.Pool) {
 	InitOrderClientRoutes.GET("/cart", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
 		controllers.GetCartProduct(ctx, db)
 	})
+
+	InitOrderClientRoutes.POST("/transactions", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
+		controllers.Transactions(ctx, db)
+	})
 }
