@@ -39,8 +39,8 @@ type CreateProducts struct {
 	Rating         float64               `form:"rating" binding:"required,gte=1,lte=10"`
 	Description    string                `form:"description" binding:"required"`
 	Stock          int                   `form:"stock" binding:"gte=0"`
-	Size           []int                 `form:"size" binding:"min=1,max=3,dive,gt=0"`
-	Variant        []int                 `form:"variant" binding:"min=1,max=2,dive,gt=0"`
+	Size           []int                 `form:"size" binding:"max=3,dive,gt=0"`
+	Variant        []int                 `form:"variant" binding:"max=2,dive,gt=0"`
 }
 
 type UpdateProducts struct {
