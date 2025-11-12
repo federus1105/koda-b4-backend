@@ -127,3 +127,63 @@ func GetCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		Result:  carts,
 	})
 }
+
+func Transactions(ctx *gin.Context, db *pgxpool.Pool) {
+	var input models.TransactionsInput
+
+	// --- VALIDATION ---
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "Invalid JSON input:",
+		})
+		fmt.Println(err.Error())
+		return
+	}
+
+	// --- GET USER IN CONTEXT ---
+	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
+	if !exists {
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Unauthorized: user not logged in",
+		})
+		return
+	}
+
+	var userID int
+	switch v := userIDInterface.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	default:
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Invalid user ID type in context",
+		})
+		return
+	}
+
+	// --- LIMIT EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// --- CALL MODEL FUNCTION ---
+	result, err := models.Transactions(ctxTimeout, db, input, userID)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to process transaction",
+		})
+		log.Println(err.Error())
+		return
+	}
+
+	// --- SUCCESS RESPONSE ---
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Transaction completed successfully",
+		Result:  result,
+	})
+}

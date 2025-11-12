@@ -30,7 +30,7 @@ func Register(ctx *gin.Context, db *pgxpool.Pool) {
 		if errors.As(err, &ve) {
 			var msgs []string
 			for _, fe := range ve {
-				msgs = append(msgs, utils.ErrorRegisterMsg(fe))
+				msgs = append(msgs, utils.ErrorMessage(fe))
 			}
 			ctx.JSON(400, models.Response{
 				Success: false,
@@ -94,7 +94,7 @@ func Login(ctx *gin.Context, db *pgxpool.Pool) {
 		if errors.As(err, &ve) {
 			var msgs []string
 			for _, fe := range ve {
-				msgs = append(msgs, utils.ErrorLoginMsg(fe))
+				msgs = append(msgs, utils.ErrorMessage(fe))
 			}
 			ctx.JSON(400, models.Response{
 				Success: false,
