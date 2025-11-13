@@ -8,6 +8,7 @@ import (
 
 	"github.com/federus1105/koda-b4-backend/internals/configs"
 	"github.com/federus1105/koda-b4-backend/internals/routes"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -22,6 +23,9 @@ import (
 // @name Authorization
 // @description Type "Bearer" followed by a space and your JWT token.
 func main() {
+	router := gin.Default()
+	router.Use(gin.Recovery())
+
 	// --- LOAD .ENV IF DEVELOPMENT ---
 	if os.Getenv("ENV") != "production" {
 		_ = godotenv.Load()
@@ -50,6 +54,6 @@ func main() {
 	}
 	log.Println("✅ REDIS Connected: ", Rdb)
 
-	router := routes.InitRouter(db, rdb)
+	routes.InitRouter(router, db, rdb)
 	router.Run("localhost:8011")
 }

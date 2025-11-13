@@ -12,32 +12,29 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func InitRouter(db *pgxpool.Pool, rd *redis.Client) *gin.Engine {
-	router := gin.Default()
+func InitRouter(app *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 	utils.InitValidator()
-	router.Use(gin.Recovery())
 
 	// --- SWAGGER ---
 	docs.SwaggerInfo.BasePath = "/"
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
-	router.Static("/img", "public")
+	app.Static("/img", "public")
 
 	// --- ROUTE ---
-	InitAuthRouter(router, db)
-	InitProductRouter(router, db, rd)
-	InitOrderRouter(router, db)
-	InitUserRoute(router, db)
-	InitCategoriesRouter(router, db)
-	InitOrderClientRoutes(router, db)
-	InitHistoryRouter(router, db)
+	InitAuthRouter(app, db)
+	InitProductRouter(app, db, rd)
+	InitOrderRouter(app, db)
+	InitUserRoute(app, db)
+	InitCategoriesRouter(app, db)
+	InitOrderClientRoutes(app, db)
+	InitHistoryRouter(app, db)
 
-	router.NoRoute(func(ctx *gin.Context) {
+	app.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(404, models.Response{
 			Success: false,
 			Message: "Route Not Found, Try Again!",
 		})
 	})
-	return router
 
 }
