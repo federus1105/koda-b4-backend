@@ -52,16 +52,13 @@ func init() {
 	// === 3. Setup Gin ===
 	App = routes.InitRouter(db, rd)
 
-	router := App.Group("/")
-	router.GET("/", func(ctx *gin.Context) {
+	App.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, models.ResponseSucces{
 			Success: true,
 			Message: "Backend is running well ✅",
 		})
 	})
 
-	// === 4. Pass db & redis client ke routes ===
-	routes.InitRouter(db, rd)
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
