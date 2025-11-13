@@ -50,8 +50,7 @@ func init() {
 	}
 
 	// === 3. Setup Gin ===
-	App = gin.New()
-	App.Use(gin.Recovery())
+	App = routes.InitRouter(db, rd)
 
 	router := App.Group("/")
 	router.GET("/", func(ctx *gin.Context) {
@@ -65,7 +64,6 @@ func init() {
 	routes.InitRouter(db, rd)
 }
 
-// Handler dipanggil oleh Vercel
 func Handler(w http.ResponseWriter, r *http.Request) {
 	App.ServeHTTP(w, r)
 }
