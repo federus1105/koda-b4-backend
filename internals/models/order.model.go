@@ -20,7 +20,7 @@ type ItemList struct {
 type OrderList struct {
 	OrderNumber string     `json:"orderNumber"`
 	Date        time.Time  `json:"date"`
-	Status      bool       `json:"status"`
+	Status      string     `json:"status"`
 	Total       float64    `json:"total"`
 	Order       []ItemList `json:"order"`
 }
@@ -41,24 +41,24 @@ type OrderDetail struct {
 	PhoneNumber   string        `json:"phonenumber"`
 	PaymentMethod string        `json:"payment_method"`
 	Delivery      string        `json:"delivery"`
-	Status        bool          `json:"status"`
+	Status        string        `json:"status"`
 	Total         float64       `json:"total"`
 	Products      []ProductItem `json:"products"`
 }
 
 type UpdateStatusRequest struct {
-	Status bool `json:"status"`
+	Status int `json:"status"`
 }
 
-func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber, Status string, limit, offset int) ([]OrderList, error) {
+func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber string, status, limit, offset int) ([]OrderList, error) {
 	var p OrderList
 	var productsJSON []byte
 
 	sql := `
 SELECT 
-    '#ORD-' || LPAD(o.id::text, 3, '0') AS order_number,
+    o.order_number,
     o.createdAt,
-    o.status,
+    s.name,
     o.total,
     JSON_AGG(
         JSON_BUILD_OBJECT(
@@ -69,6 +69,7 @@ SELECT
 FROM orders o
 JOIN product_orders po ON po.id_order = o.id
 JOIN product p ON p.id = po.id_product
+JOIN status s ON s.id = o.id_status
 `
 
 	// --- SQL DINAMIS ---
@@ -79,18 +80,18 @@ JOIN product p ON p.id = po.id_product
 	// --- SEARCH ---
 	if strings.TrimSpace(OrderNumber) != "" {
 		if id, err := strconv.Atoi(OrderNumber); err == nil {
-			whereClauses = append(whereClauses, fmt.Sprintf("o.id = $%d", argIdx))
-			args = append(args, id)
+			formatted := fmt.Sprintf("#ORD-%03d", id)
+			whereClauses = append(whereClauses, fmt.Sprintf("o.order_number = $%d", argIdx))
+			args = append(args, formatted)
 			argIdx++
 		}
 	}
 
 	// --- FILTER STATUS ---
-	switch Status {
-	case "true":
-		whereClauses = append(whereClauses, "o.status = true")
-	case "false":
-		whereClauses = append(whereClauses, "o.status = false")
+	if status != 0 {
+		sql += fmt.Sprintf(" AND o.id_status = $%d", argIdx)
+		args = append(args, status)
+		argIdx++
 	}
 
 	// --- APPEND ALL WHERE ---
@@ -99,7 +100,7 @@ JOIN product p ON p.id = po.id_product
 	}
 
 	// --- GROUP BY ---
-	sql += ` GROUP BY o.id, o.createdAt, o.status, o.total`
+	sql += ` GROUP BY o.id, s.name, o.createdAt, o.id_status, o.total`
 
 	// --- ORDER LIMIT, OFFSET ---
 	sql += fmt.Sprintf(" ORDER BY o.createdAt DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
@@ -138,13 +139,13 @@ func GetDetailOrder(ctx context.Context, db *pgxpool.Pool, OrderID int) (OrderDe
 	var productsJSON []byte
 
 	sql := `SELECT 
-    '#ORD-' || LPAD(o.id::text, 3, '0') AS order_code,
+	o.order_number,
     o.fullname,
     o.address,
     o.phonenumber,
 	pm.name AS payment_method,
     d.name,
-    o.status,
+    s.name,
     o.total,
     JSON_AGG(
         JSON_BUILD_OBJECT(
@@ -161,8 +162,9 @@ func GetDetailOrder(ctx context.Context, db *pgxpool.Pool, OrderID int) (OrderDe
 	JOIN product_orders po ON po.id_order = o.id
 	JOIN product p ON p.id = po.id_product
     JOIN delivery d ON d.id = o.id_delivery
+    JOIN status s ON s.id = o.id_status
 	WHERE o.id = $1
-	GROUP BY o.id, o.fullname, o.address, o.phonenumber, pm.name, d.name, o.status, o.total`
+	GROUP BY o.id, o.fullname, o.address, o.phonenumber, pm.name, d.name, s.name, o.total`
 
 	err := db.QueryRow(ctx, sql, OrderID).Scan(
 		&order.OrderNumber,
@@ -186,8 +188,8 @@ func GetDetailOrder(ctx context.Context, db *pgxpool.Pool, OrderID int) (OrderDe
 	return order, nil
 }
 
-func UpdateOrderStatus(ctx context.Context, db *pgxpool.Pool, orderID int, status bool) error {
-	sql := `UPDATE orders SET status = $1 WHERE id = $2`
+func UpdateOrderStatus(ctx context.Context, db *pgxpool.Pool, orderID, status int) error {
+	sql := `UPDATE orders SET id_status = $1 WHERE id = $2`
 	_, err := db.Exec(ctx, sql, status, orderID)
 	return err
 }
