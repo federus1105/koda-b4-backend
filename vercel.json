@@ -2,15 +2,6 @@
   "version": 2,
   "trailingSlash": false,
   "builds": [
-    {
-      "src": "api/index.go",
-      "use": "@vercel/go"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index.go"
-    }
+    { "src": "api/index.go", "use": "@vercel/go" }
   ]
 }
