@@ -25,9 +25,10 @@ func InitRedis() (*redis.Client, string, error) {
 var ctx = context.Background()
 
 func NewRedis() *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("UPSTASH_REDIS_URL"),
-		Password: os.Getenv("UPSTASH_REDIS_PASSWORD"),
-		DB:       0,
-	})
+	url := os.Getenv("REDIS_URL")
+	opt, err := redis.ParseURL(url)
+	if err != nil {
+		panic(err)
+	}
+	return redis.NewClient(opt)
 }
