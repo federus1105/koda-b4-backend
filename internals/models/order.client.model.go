@@ -231,8 +231,8 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 	var orderNumber string
 	err = tx.QueryRow(ctx, `
 		INSERT INTO orders(
-			id_account, email, fullname, address, phoneNumber, id_delivery, id_paymentmethod, total, status, createdAt, order_number
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,NOW(), '#ORD-' || LPAD(nextval('orders_id_seq')::text, 3, '0'))
+			id_account, email, fullname, address, phoneNumber, id_delivery, id_paymentmethod, total, id_status, createdAt, order_number
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1,NOW(), '#ORD-' || LPAD(nextval('orders_id_seq')::text, 3, '0'))
 		RETURNING id, order_number
 	`, Iduser, input.Email, input.FullName, input.Address, input.Phone, input.Id_Delivery, input.Id_PaymentMethod, total).Scan(&orderID, &orderNumber)
 	if err != nil {
