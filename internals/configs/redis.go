@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -19,4 +20,14 @@ func InitRedis() (*redis.Client, string, error) {
 		DB:       0,
 	})
 	return rdb, rdbUser, nil
+}
+
+var ctx = context.Background()
+
+func NewRedis() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     os.Getenv("UPSTASH_REDIS_URL"),
+		Password: os.Getenv("UPSTASH_REDIS_PASSWORD"),
+		DB:       0,
+	})
 }
