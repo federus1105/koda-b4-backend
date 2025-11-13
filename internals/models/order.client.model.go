@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -63,6 +64,25 @@ type TransactionsInput struct {
 }
 
 func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, input CartItemRequest) (*CartItemResponse, error) {
+	var stock int
+	// --- CHECKING STOCK ---
+	err := db.QueryRow(ctx, "SELECT stock FROM product WHERE id = $1", input.ProductID).Scan(&stock)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return &CartItemResponse{}, fmt.Errorf("product Not found")
+		}
+		return nil, fmt.Errorf("failed to check product stock %w", err)
+	}
+
+	// --- VALIDATION STOCK ---
+	if stock <= 0 {
+		return nil, fmt.Errorf("product is out of stock")
+	}
+	if input.Quantity > stock {
+		return nil, fmt.Errorf("insufficient stock %d", stock)
+	}
+
+	// --- IF STOCK READY INSERT CART ---
 	sql := `INSERT INTO cart (account_id, product_id, size_id, variant_id, quantity)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (account_id, product_id, size_id, variant_id)
@@ -73,7 +93,7 @@ func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, inp
 
 	var item CartItemResponse
 
-	err := db.QueryRow(ctx, sql,
+	err = db.QueryRow(ctx, sql,
 		accountID,
 		input.ProductID,
 		input.SizeID,
