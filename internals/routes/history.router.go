@@ -8,9 +8,13 @@ import (
 )
 
 func InitHistoryRouter(router *gin.Engine, db *pgxpool.Pool) {
-	historyRouter := router.Group("")
+	historyRouter := router.Group("/history")
 
-	historyRouter.GET("/history", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
+	historyRouter.GET("", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
 		controllers.GetHistory(ctx, db)
+	})
+
+	historyRouter.GET("/:id", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
+		controllers.DetailHistory(ctx, db)
 	})
 }
