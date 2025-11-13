@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [
+  "functions": [
     { "src": "api/index.go", "use": "@vercel/go" }
   ],
   "routes": [
