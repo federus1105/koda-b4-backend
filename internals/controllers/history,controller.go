@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -84,5 +86,70 @@ func GetHistory(ctx *gin.Context, db *pgxpool.Pool) {
 		Success: true,
 		Message: "Get data successfully",
 		Result:  histories,
+	})
+}
+
+func DetailHistory(ctx *gin.Context, db *pgxpool.Pool) {
+	// --- GET HISTORY ID ---
+	historyIDStr := ctx.Param("id")
+	historyID, err := strconv.Atoi(historyIDStr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "Invalid order ID",
+		})
+		return
+	}
+
+	// --- GET USER IN CONTEXT ---
+	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
+	if !exists {
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Unauthorized: user not logged in",
+		})
+		return
+	}
+
+	var userID int
+	switch v := userIDInterface.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	default:
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Invalid user ID type in context",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME --
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// --- GET DETAIL  HISTORY---
+	history, err := models.DetailHistory(ctxTimeout, db, historyID, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "history not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get detail product",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "history detail retrieved successfully",
+		Result:  history,
 	})
 }
