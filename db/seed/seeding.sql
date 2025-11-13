@@ -13,6 +13,7 @@ VALUES
 ('non_coffee');
 
 
+
 insert into payment_method (name, photos) values 
 ('Google Pay', 'https://miro.medium.com/v2/resize:fit:1400/1*NNI7aPLtSaLo6jb4KGEFDA.jpeg'),
 ('Visa', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBGHI2XXCJtEEt01GrjOfyL9ij_gf8uA8jgA&s'),
@@ -26,6 +27,8 @@ insert into payment_method (name, photos) values
 insert into sizes (name) values ('regular'),('medium'),('large');
 
 insert into variants (name) values ('ice'),('hot');
+
+INSERT INTO delivery (name) VALUES ('dine_in'), ('door_delivery'), ('pickup');
  
 
 ---  INSERT PRODUCT IMAGES  ---
@@ -298,3 +301,6 @@ INSERT INTO size_product (id_product, id_size) VALUES
 (51, 1),(51, 2),(51, 3),
 (52, 1),(52, 2),(52, 3),
 (53, 1),(53, 2),(53, 3);
+
+
+INSERT INTO status (name) VALUES ('on progres'),('pending'),('done');

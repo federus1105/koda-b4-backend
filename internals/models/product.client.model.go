@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,6 +17,10 @@ type FavoriteProduct struct {
 	Description string `json:"description"`
 }
 
+type Option struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
 type ProductClient struct {
 	ImageOne      *string  `json:"-"`
 	ImageTwo      *string  `json:"-"`
@@ -24,13 +28,13 @@ type ProductClient struct {
 	ImageFour     *string  `json:"-"`
 	Images        []string `json:"images"`
 	Name          string   `json:"name"`
-	Price         string   `json:"price"`
-	PriceDiscount *string  `json:"priceDiscount"`
+	Price         float64  `json:"price"`
+	PriceDiscount float64  `json:"priceDiscount"`
 	Rating        string   `json:"rating"`
 	Description   string   `json:"desc"`
 	Stock         int      `json:"stock"`
-	Size          []string `json:"sizes"`
-	Variant       []string `json:"variant"`
+	Size          []Option `json:"sizes"`
+	Variant       []Option `json:"variant"`
 }
 
 func GetListFavoriteProduct(ctx context.Context, db *pgxpool.Pool, limit, offset int) ([]FavoriteProduct, error) {
@@ -162,7 +166,7 @@ WHERE p.is_deleted = false
 
 func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (ProductClient, error) {
 	var product ProductClient
-
+	var priceDiscount *float64
 	// --- QUERY ----
 	err := db.QueryRow(ctx, `
         SELECT p.name, p.priceoriginal, p.priceDiscount, p.rating, p.description, p.stock,
@@ -173,7 +177,7 @@ func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (Produ
     `, productId).Scan(
 		&product.Name,
 		&product.Price,
-		&product.PriceDiscount,
+		&priceDiscount,
 		&product.Rating,
 		&product.Description,
 		&product.Stock,
@@ -186,49 +190,57 @@ func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (Produ
 		return ProductClient{}, err
 	}
 
+	// -- ASSIGN IF NULL IN DB MAKE IT O ---
+	if priceDiscount == nil {
+		product.PriceDiscount = 0.0
+	} else {
+		product.PriceDiscount = *priceDiscount
+	}
+
 	// --- APPEND IMAGES TO SLICE IMAGES ---
 	product.Images = []string{
-		utils.StringOrEmpty(product.ImageOne),
-		utils.StringOrEmpty(product.ImageTwo),
-		utils.StringOrEmpty(product.ImageThree),
-		utils.StringOrEmpty(product.ImageFour),
+		libs.StringOrEmpty(product.ImageOne),
+		libs.StringOrEmpty(product.ImageTwo),
+		libs.StringOrEmpty(product.ImageThree),
+		libs.StringOrEmpty(product.ImageFour),
 	}
 
 	// --- GET SIZE ---
 	rows, err := db.Query(ctx, `
-        SELECT s.name
-        FROM size_product sp
-        JOIN sizes s ON sp.id_size = s.id
-        WHERE sp.id_product=$1
-    `, productId)
+    SELECT s.id, s.name
+    FROM size_product sp
+    JOIN sizes s ON sp.id_size = s.id
+    WHERE sp.id_product=$1
+`, productId)
 	if err != nil {
 		return ProductClient{}, err
 	}
 	defer rows.Close()
 
+	product.Size = []Option{}
 	for rows.Next() {
-		var size string
-		if err := rows.Scan(&size); err != nil {
+		var size Option
+		if err := rows.Scan(&size.Id, &size.Name); err != nil {
 			return ProductClient{}, err
 		}
 		product.Size = append(product.Size, size)
 	}
-
 	// --- GET VARIANT ----
 	rowsVariant, err := db.Query(ctx, `
-        SELECT v.name
-        FROM variant_product vp
-        JOIN variants v ON vp.id_variant = v.id
-        WHERE vp.id_product=$1
-    `, productId)
+    SELECT v.id, v.name
+    FROM variant_product vp
+    JOIN variants v ON vp.id_variant = v.id
+    WHERE vp.id_product = $1
+`, productId)
 	if err != nil {
 		return ProductClient{}, err
 	}
 	defer rowsVariant.Close()
 
+	product.Variant = []Option{}
 	for rowsVariant.Next() {
-		var variant string
-		if err := rowsVariant.Scan(&variant); err != nil {
+		var variant Option
+		if err := rowsVariant.Scan(&variant.Id, &variant.Name); err != nil {
 			return ProductClient{}, err
 		}
 		product.Variant = append(product.Variant, variant)

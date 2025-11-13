@@ -22,7 +22,6 @@ type Product struct {
 	Stock       string   `json:"stock"`
 	Size        []string `json:"size"`
 }
-
 type CreateProducts struct {
 	Id             int                   `form:"id"`
 	Name           string                `form:"name" binding:"required"`
@@ -39,8 +38,8 @@ type CreateProducts struct {
 	Rating         float64               `form:"rating" binding:"required,gte=1,lte=10"`
 	Description    string                `form:"description" binding:"required"`
 	Stock          int                   `form:"stock" binding:"gte=0"`
-	Size           []int                 `form:"size,omitempty" binding:"max=3,dive,gt=0"`
-	Variant        []int                 `form:"variant,omitempty" binding:"max=2,dive,gt=0"`
+	Size           []int                 `form:"size,omitempty" binding:"max=3,dive,gt=0,lte=3"`
+	Variant        []int                 `form:"variant,omitempty" binding:"max=2,dive,gt=0,lte=2"`
 }
 
 type UpdateProducts struct {
@@ -58,6 +57,8 @@ type UpdateProducts struct {
 	Rating         *float64              `form:"rating" binding:"omitempty,gte=1,lte=10"`
 	Description    *string               `form:"description"`
 	Stock          *int                  `form:"stock" binding:"omitempty,gte=0"`
+	Size           []int                 `form:"size,omitempty" binding:"max=3,dive,gt=0,lte=3"`
+	Variant        []int                 `form:"variant,omitempty" binding:"max=2,dive,gt=0,lte=2"`
 }
 
 type ProductResponse struct {
@@ -344,15 +345,55 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 		}
 	}
 
+	// --- HANDLE SIZE ---
+	if len(body.Size) > 0 {
+		_, err := tx.Exec(ctx, "DELETE FROM size_product WHERE id_product=$1", body.Id)
+		if err != nil {
+			return CreateProducts{}, err
+		}
+
+		// Insert size baru
+		for _, sizeID := range body.Size {
+			if sizeID > 0 && sizeID <= 3 {
+				_, err := tx.Exec(ctx, "INSERT INTO size_product (id_product, id_size) VALUES ($1, $2)", body.Id, sizeID)
+				if err != nil {
+					return CreateProducts{}, err
+				}
+			}
+		}
+	}
+
+	// --- HANDLE VARIANT ---
+	if len(body.Variant) > 0 {
+		// Hapus semua variant lama
+		_, err := tx.Exec(ctx, "DELETE FROM variant_product WHERE id_product=$1", body.Id)
+		if err != nil {
+			return CreateProducts{}, err
+		}
+
+		// Insert variant baru
+		for _, variantID := range body.Variant {
+			if variantID > 0 && variantID <= 2 {
+				_, err := tx.Exec(ctx, "INSERT INTO variant_product (id_product, id_variant) VALUES ($1, $2)", body.Id, variantID)
+				if err != nil {
+					return CreateProducts{}, err
+				}
+			}
+		}
+	}
+
 	// ----- GET DATA  ----
 	var product CreateProducts
 	err = tx.QueryRow(ctx, `
-        SELECT p.id, name, p.description, p.rating, p.priceoriginal, p.stock, p.id_product_images,
-               pi.photos_one, pi.photos_two, pi.photos_three, pi.photos_four
-        FROM product p
-        JOIN product_images pi ON p.id_product_images = pi.id
-        WHERE p.id=$1
-    `, body.Id).Scan(
+    SELECT p.id, name, p.description, p.rating, p.priceoriginal, p.stock, p.id_product_images,
+       COALESCE(pi.photos_one, '') AS photos_one,
+       COALESCE(pi.photos_two, '') AS photos_two,
+       COALESCE(pi.photos_three, '') AS photos_three,
+       COALESCE(pi.photos_four, '') AS photos_four
+	FROM product p
+	JOIN product_images pi ON p.id_product_images = pi.id
+	WHERE p.id=$1
+`, body.Id).Scan(
 		&product.Id,
 		&product.Name,
 		&product.Description,
@@ -368,6 +409,48 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 	if err != nil {
 		return CreateProducts{}, err
 	}
+
+	// --- GET SIZE LIST ---
+	rowsSize, err := tx.Query(ctx, `
+	SELECT id_size
+	FROM size_product
+	WHERE id_product = $1
+`, body.Id)
+	if err != nil {
+		return CreateProducts{}, err
+	}
+	defer rowsSize.Close()
+
+	var sizeIDs []int
+	for rowsSize.Next() {
+		var sizeID int
+		if err := rowsSize.Scan(&sizeID); err != nil {
+			return CreateProducts{}, err
+		}
+		sizeIDs = append(sizeIDs, sizeID)
+	}
+	product.Size = sizeIDs
+
+	// --- GET VARIANT LIST ---
+	rowsVariant, err := tx.Query(ctx, `
+	SELECT id_variant
+	FROM variant_product
+	WHERE id_product = $1
+`, body.Id)
+	if err != nil {
+		return CreateProducts{}, err
+	}
+	defer rowsVariant.Close()
+
+	var variantIDs []int
+	for rowsVariant.Next() {
+		var variantID int
+		if err := rowsVariant.Scan(&variantID); err != nil {
+			return CreateProducts{}, err
+		}
+		variantIDs = append(variantIDs, variantID)
+	}
+	product.Variant = variantIDs
 
 	// --- ASIGN IMAGE STR TO RETURN STRUCT RESPONSE---
 	if body.Image_oneStr != nil {

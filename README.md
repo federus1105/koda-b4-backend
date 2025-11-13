@@ -63,16 +63,23 @@ PRODUCT_SIZE {
     int id_product
 }
 
+DELIVERY{
+    int id
+    string name
+}
+
 ORDERS {
     int id
     int id_account
     int id_paymenMethod
     string fullname
+    string email
     string address
     string phoneNumber
-    DELIVERY delivery
+    int id_delivery
     float total
-    boolean status 
+    int IDstatus 
+    int order_number
     timestamp createdAt
 }
 
@@ -124,7 +131,25 @@ PRODUCT_ORDERS {
    int id_product
    int id_order
    int quantity
+   string variant
+   string size
    float subtotal
+}
+
+CART {
+    int id
+    int account_id
+    int product_id
+    int size_id
+    int variant_id
+    float quantity
+    timestamp created_at
+    timestamp updated_at
+}
+
+STATUS {
+    int id
+    string name 
 }
 
 
@@ -150,6 +175,14 @@ PRODUCT_ORDERS {
 
     PRODUCT ||--o{PRODUCT_SIZE:""
     PRODUCT ||--o{PRODUCT_VARIANT:""
+
+    DELIVERY ||--||ORDERS:""
+
+    CART||--o{ACCOUNT:""
+    PRODUCT||--||CART:""
+
+    STATUS ||--||ORDERS:""
+
 
 ```
 
