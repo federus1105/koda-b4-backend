@@ -35,7 +35,10 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	limit := 10
 	offset := (page - 1) * limit
 	orderNumber := ctx.Query("ordernumber")
-	status := ctx.Query("status")
+
+	// --- FILTER STATUS ---
+	statusStr := ctx.Query("status")
+	status, _ := strconv.Atoi(statusStr)
 
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -137,11 +140,12 @@ func UpdateOrderStatus(ctx *gin.Context, db *pgxpool.Pool) {
 	}
 
 	var body models.UpdateStatusRequest
-	if err := ctx.BindJSON(&body); err != nil {
+	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(400, models.Response{
 			Success: false,
 			Message: "Invalid JSON body",
 		})
+		fmt.Println(err)
 		return
 	}
 
