@@ -1,9 +1,5 @@
 {
-    "trailingSlash": false,
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/api/entrypoint.go"
-        }
-    ]
+  "builds": [
+    { "src": "api/**/*.go", "use": "@vercel/go" }
+  ]
 }
