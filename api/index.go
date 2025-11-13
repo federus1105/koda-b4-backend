@@ -18,13 +18,10 @@ func init() {
 
 	db, err := configs.ConnectDB()
 	if err != nil {
-		panic("DB connection failed: " + err.Error())
+		fmt.Println("DB connection failed: " + err.Error())
 	}
 
-	rdb, _, err := configs.InitRedis()
-	if err != nil {
-		panic("Redis connection failed: " + err.Error())
-	}
+	rdb := configs.NewRedis()
 
 	routes.InitRouter(App, db, rdb)
 	App.GET("/", func(ctx *gin.Context) {
