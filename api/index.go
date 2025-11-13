@@ -3,28 +3,18 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/federus1105/koda-b4-backend/internals/configs"
 	"github.com/federus1105/koda-b4-backend/internals/routes"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 )
 
 var App *gin.Engine
 
 func init() {
-	if os.Getenv("ENV") != "production" {
-		_ = godotenv.Load()
-	}
 
 	App = gin.New()
 	App.Use(gin.Recovery())
-
-	App.Use(func(c *gin.Context) {
-		fmt.Printf("Request: %s %s\n", c.Request.Method, c.Request.URL.Path)
-		c.Next()
-	})
 
 	db, err := configs.ConnectDB()
 	if err != nil {
@@ -43,10 +33,6 @@ func init() {
 			"Message": "Backend is running 🚀",
 		})
 	})
-	fmt.Println("=== Registered Routes ===")
-	for _, route := range App.Routes() {
-		fmt.Printf("%s %s\n", route.Method, route.Path)
-	}
 
 	fmt.Println("Router initialized successfully")
 }
