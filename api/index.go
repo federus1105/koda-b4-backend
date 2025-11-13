@@ -17,7 +17,7 @@ func init() {
 	if os.Getenv("ENV") != "production" {
 		_ = godotenv.Load()
 	}
-	
+
 	App = gin.New()
 	App.Use(gin.Recovery())
 
@@ -32,7 +32,14 @@ func init() {
 	}
 
 	routes.InitRouter(App, db, rdb)
-	fmt.Println("✅ Router initialized successfully")
+	App.GET("/", func(ctx *gin.Context) {
+		ctx.JSON(200, gin.H{
+			"Success": true,
+			"Message": "Backend is running 🚀",
+		})
+	})
+
+	fmt.Println("Router initialized successfully")
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
