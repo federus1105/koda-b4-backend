@@ -73,11 +73,12 @@ ORDERS {
     int id_account
     int id_paymenMethod
     string fullname
+    string email
     string address
     string phoneNumber
     int id_delivery
     float total
-    boolean status 
+    int IDstatus 
     int order_number
     timestamp createdAt
 }
@@ -146,6 +147,11 @@ CART {
     timestamp updated_at
 }
 
+STATUS {
+    int id
+    string name 
+}
+
 
     ROLE ||--o{ USERS : ""
     USERS ||--|| ACCOUNT : ""
@@ -174,6 +180,8 @@ CART {
 
     CART||--o{ACCOUNT:""
     PRODUCT||--||CART:""
+
+    STATUS ||--||ORDERS:""
 
 
 ```
