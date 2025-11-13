@@ -301,3 +301,6 @@ INSERT INTO size_product (id_product, id_size) VALUES
 (51, 1),(51, 2),(51, 3),
 (52, 1),(52, 2),(52, 3),
 (53, 1),(53, 2),(53, 3);
+
+
+INSERT INTO status (name) VALUES ('on progres'),('pending'),('done');
