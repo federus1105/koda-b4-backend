@@ -130,7 +130,7 @@ func DetailHistory(ctx *gin.Context, db *pgxpool.Pool) {
 	defer cancel()
 
 	// --- GET DETAIL  HISTORY---
-	history, err := models.DetailHistory(ctxTimeout, db, historyID, userID)
+	history, err := models.DetailHistory(ctxTimeout, db, userID, historyID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(404, models.Response{
