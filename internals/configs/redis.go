@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -21,8 +20,6 @@ func InitRedis() (*redis.Client, string, error) {
 	})
 	return rdb, rdbUser, nil
 }
-
-var ctx = context.Background()
 
 func NewRedis() *redis.Client {
 	url := os.Getenv("REDIS_URL")
