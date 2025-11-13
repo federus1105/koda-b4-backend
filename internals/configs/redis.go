@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -21,11 +22,18 @@ func InitRedis() (*redis.Client, string, error) {
 	return rdb, rdbUser, nil
 }
 
-func NewRedis() *redis.Client {
+func NewRedis() (*redis.Client, error) {
 	url := os.Getenv("REDIS_URL")
+	if url == "" {
+		return nil, fmt.Errorf("REDIS_URL not set")
+	}
 	opt, err := redis.ParseURL(url)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to parse REDIS_URL: %w", err)
 	}
-	return redis.NewClient(opt)
+	rdb := redis.NewClient(opt)
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+	}
+	return rdb, nil
 }
