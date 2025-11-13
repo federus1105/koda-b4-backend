@@ -72,11 +72,33 @@ func CreateCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- CALL MODEL FUNCTION ---
 	newCartItem, err := models.CreateCartProduct(ctxTimeout, db, userID, input)
 	if err != nil {
-		ctx.JSON(500, models.Response{
-			Success: false,
-			Message: "Internal server error",
-		})
-		log.Println(err.Error())
+		errMsg := err.Error()
+
+		// -- MESSAGES ERROR --
+		switch {
+		case strings.Contains(errMsg, "product is out of stock"):
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: "product is out of stock",
+			})
+		case strings.Contains(errMsg, "insufficient stock"):
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: errMsg,
+			})
+		case strings.Contains(errMsg, "product Not found"):
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "product not found",
+			})
+		default:
+			// Jika bukan error validasi user, berarti error sistem
+			ctx.JSON(500, models.Response{
+				Success: false,
+				Message: "internal server error",
+			})
+			log.Println(errMsg)
+		}
 		return
 	}
 
