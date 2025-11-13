@@ -10,7 +10,6 @@ import (
 )
 
 var App *gin.Engine
-var ctx *gin.Context
 
 func init() {
 
@@ -19,15 +18,10 @@ func init() {
 
 	db, err := configs.ConnectDB()
 	if err != nil {
-		fmt.Println("DB connection failed: " + err.Error())
+		panic("DB connection failed: " + err.Error())
 	}
 
-	rdb, err := configs.NewRedis()
-	if err != nil {
-		fmt.Println("Redis connection error:", err)
-		ctx.JSON(500, gin.H{"error": "internal server error"})
-		return
-	}
+	rdb := configs.NewRedis()
 
 	routes.InitRouter(App, db, rdb)
 	App.GET("/", func(ctx *gin.Context) {
