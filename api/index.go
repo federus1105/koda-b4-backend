@@ -18,6 +18,7 @@ func init() {
 		_ = godotenv.Load()
 	}
 
+	gin.SetMode(gin.ReleaseMode) 
 	App = gin.New()
 	App.Use(gin.Recovery())
 
