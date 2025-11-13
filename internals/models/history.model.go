@@ -50,7 +50,7 @@ func GetHistory(ctx context.Context, db *pgxpool.Pool, IdUser int, month, status
 	JOIN product_orders po ON po.id_order = o.id
 	JOIN product p ON p.id = po.id_product
 	JOIN product_images pi ON pi.id = p.id_product_images
-	JOIN status s ON s.id = o.id
+	JOIN status s ON s.id = o.id_status
 	WHERE o.id_account = $1`
 
 	args := []interface{}{IdUser}
