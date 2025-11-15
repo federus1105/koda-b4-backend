@@ -768,6 +768,37 @@ const docTemplate = `{
             }
         },
         "/profile": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update password for the logged-in user",
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update user password",
+                "parameters": [
+                    {
+                        "description": "Password update data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReqUpdatePassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -776,7 +807,7 @@ const docTemplate = `{
                 ],
                 "description": "Update user profile including fullname, phone, address, email, and photo",
                 "tags": [
-                    "Users"
+                    "Profile"
                 ],
                 "summary": "Update user profile",
                 "parameters": [
@@ -823,6 +854,25 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.ReqUpdatePassword": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "new_password",
+                "old_password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string"
+                },
+                "old_password": {
+                    "type": "string"
+                }
+            }
+        },
         "models.ResponseSucces": {
             "type": "object",
             "properties": {

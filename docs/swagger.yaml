@@ -1,5 +1,18 @@
 basePath: /
 definitions:
+  models.ReqUpdatePassword:
+    properties:
+      confirm_password:
+        type: string
+      new_password:
+        type: string
+      old_password:
+        type: string
+    required:
+    - confirm_password
+    - new_password
+    - old_password
+    type: object
   models.ResponseSucces:
     properties:
       message:
@@ -561,7 +574,26 @@ paths:
       - BearerAuth: []
       summary: Update user profile
       tags:
-      - Users
+      - Profile
+    put:
+      description: Update password for the logged-in user
+      parameters:
+      - description: Password update data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqUpdatePassword'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Update user password
+      tags:
+      - Profile
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.
