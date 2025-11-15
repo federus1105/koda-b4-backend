@@ -685,6 +685,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/forgot-password": {
+            "post": {
+                "description": "Receive user email, create password reset token, store it in Redis, and send email containing password reset link",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Send password reset link to user email",
+                "parameters": [
+                    {
+                        "description": "Email user",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReqForgot"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reset link successfully sent",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login user and get JWT token",
@@ -734,6 +762,34 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "description": "Resets the password for a user using a valid token. The token must have been issued during the forgot password process.",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset user password",
+                "parameters": [
+                    {
+                        "description": "Reset password request",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReqResetPassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password updated successfully",
                         "schema": {
                             "$ref": "#/definitions/models.ResponseSucces"
                         }
@@ -854,6 +910,31 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.ReqForgot": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ReqResetPassword": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "models.ReqUpdatePassword": {
             "type": "object",
             "required": [
@@ -870,6 +951,17 @@ const docTemplate = `{
                 },
                 "old_password": {
                     "type": "string"
+                }
+            }
+        },
+        "models.Response": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },

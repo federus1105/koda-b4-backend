@@ -1,5 +1,21 @@
 basePath: /
 definitions:
+  models.ReqForgot:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  models.ReqResetPassword:
+    properties:
+      new_password:
+        type: string
+      token:
+        type: string
+    required:
+    - token
+    type: object
   models.ReqUpdatePassword:
     properties:
       confirm_password:
@@ -12,6 +28,13 @@ definitions:
     - confirm_password
     - new_password
     - old_password
+    type: object
+  models.Response:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
     type: object
   models.ResponseSucces:
     properties:
@@ -487,6 +510,25 @@ paths:
       summary: Edit an existing user
       tags:
       - Users
+  /auth/forgot-password:
+    post:
+      description: Receive user email, create password reset token, store it in Redis,
+        and send email containing password reset link
+      parameters:
+      - description: Email user
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqForgot'
+      responses:
+        "200":
+          description: Reset link successfully sent
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: Send password reset link to user email
+      tags:
+      - Auth
   /auth/login:
     post:
       description: Login user and get JWT token
@@ -521,6 +563,25 @@ paths:
           schema:
             $ref: '#/definitions/models.ResponseSucces'
       summary: Register user
+      tags:
+      - Auth
+  /auth/reset-password:
+    post:
+      description: Resets the password for a user using a valid token. The token must
+        have been issued during the forgot password process.
+      parameters:
+      - description: Reset password request
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqResetPassword'
+      responses:
+        "200":
+          description: Password updated successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      summary: Reset user password
       tags:
       - Auth
   /favorite-product:
