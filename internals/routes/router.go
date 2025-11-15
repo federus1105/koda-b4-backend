@@ -31,6 +31,7 @@ func InitRouter(db *pgxpool.Pool, rd *redis.Client) *gin.Engine {
 	InitCategoriesRouter(router, db)
 	InitOrderClientRoutes(router, db)
 	InitHistoryRouter(router, db)
+	InitProfileRouter(router, db)
 
 	router.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(404, models.Response{
