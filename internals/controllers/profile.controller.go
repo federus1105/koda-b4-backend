@@ -22,7 +22,7 @@ import (
 // ProfileUpdate godoc
 // @Summary      Update user profile
 // @Description  Update user profile including fullname, phone, address, email, and photo
-// @Tags         Users
+// @Tags         Profile
 // @Param        fullname  formData  string  false  "Full name of the user"
 // @Param        phone     formData  string  false  "Phone number of the user"
 // @Param        address   formData  string  false  "Address of the user"
@@ -163,6 +163,92 @@ func ProfileUpdate(ctx *gin.Context, db *pgxpool.Pool) {
 		Success: true,
 		Message: "Update Profile Succesfully",
 		Result:  response,
+	})
+
+}
+
+// UpdatePasswordHandler godoc
+// @Summary      Update user password
+// @Description  Update password for the logged-in user
+// @Tags         Profile
+// @Param        body  body      models.ReqUpdatePassword  true  "Password update data"
+// @Success      200   {object}  models.ResponseSucces
+// @Router       /profile [put]
+// @Security BearerAuth
+func UpdatePassword(ctx *gin.Context, db *pgxpool.Pool) {
+	var input models.ReqUpdatePassword
+
+	//  --- VALIDATION ---
+	if err := ctx.ShouldBind(&input); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			var msgs []string
+			for _, fe := range ve {
+				msgs = append(msgs, utils.ErrorMessage(fe))
+			}
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: strings.Join(msgs, ", "),
+			})
+			return
+		}
+
+		ctx.JSON(400, models.Response{
+			Success: false,
+			Message: "invalid JSON format",
+		})
+		return
+	}
+
+	// --- GET USER IN CONTEXT ---
+	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
+	if !exists {
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Unauthorized: user not logged in",
+		})
+		return
+	}
+
+	var userID int
+	switch v := userIDInterface.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	default:
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Invalid user ID type in context",
+		})
+		return
+	}
+
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := models.UpdatePassword(ctxTimeout, db, userID, input.OldPassword, input.ConfirmPassword); err != nil {
+		if errors.Is(err, utils.ErrValidation) {
+			ctx.JSON(400, models.Response{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Internal server error",
+		})
+		fmt.Println(err)
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "password update successfully",
+		Result: gin.H{
+			"ID_user": userID,
+		},
 	})
 
 }
