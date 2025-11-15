@@ -11,7 +11,7 @@ definitions:
   models.UpdateStatusRequest:
     properties:
       status:
-        type: boolean
+        type: integer
     type: object
   utils.CategoriesRequest:
     properties:
@@ -510,6 +510,58 @@ paths:
       summary: Register user
       tags:
       - Auth
+  /favorite-product:
+    get:
+      description: Get paginated list of products with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      summary: Get list products Favorite
+      tags:
+      - Products
+  /profile:
+    patch:
+      description: Update user profile including fullname, phone, address, email,
+        and photo
+      parameters:
+      - description: Full name of the user
+        in: formData
+        name: fullname
+        type: string
+      - description: Phone number of the user
+        in: formData
+        name: phone
+        type: string
+      - description: Address of the user
+        in: formData
+        name: address
+        type: string
+      - description: Email of the user
+        in: formData
+        name: email
+        type: string
+      - description: Profile photo file
+        in: formData
+        name: photos
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - Users
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.
