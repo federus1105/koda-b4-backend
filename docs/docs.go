@@ -685,6 +685,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/forgot-password": {
+            "post": {
+                "description": "Receive user email, create password reset token, store it in Redis, and send email containing password reset link",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Send password reset link to user email",
+                "parameters": [
+                    {
+                        "description": "Email user",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReqForgot"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reset link successfully sent",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login user and get JWT token",
@@ -740,9 +768,203 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "description": "Resets the password for a user using a valid token. The token must have been issued during the forgot password process.",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset user password",
+                "parameters": [
+                    {
+                        "description": "Reset password request",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReqResetPassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/favorite-product": {
+            "get": {
+                "description": "Get paginated list of products with pagination",
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get list products Favorite",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
+        },
+        "/profile": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update password for the logged-in user",
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update user password",
+                "parameters": [
+                    {
+                        "description": "Password update data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReqUpdatePassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update user profile including fullname, phone, address, email, and photo",
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update user profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Full name of the user",
+                        "name": "fullname",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Phone number of the user",
+                        "name": "phone",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Address of the user",
+                        "name": "address",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Email of the user",
+                        "name": "email",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Profile photo file",
+                        "name": "photos",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseSucces"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "models.ReqForgot": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ReqResetPassword": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ReqUpdatePassword": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "new_password",
+                "old_password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string"
+                },
+                "old_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Response": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "models.ResponseSucces": {
             "type": "object",
             "properties": {
@@ -759,7 +981,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
-                    "type": "boolean"
+                    "type": "integer"
                 }
             }
         },

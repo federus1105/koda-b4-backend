@@ -2,21 +2,20 @@ package controllers
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/federus1105/koda-b4-backend/internals/middlewares"
 	"github.com/federus1105/koda-b4-backend/internals/models"
 	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // Register godoc
@@ -164,31 +163,104 @@ func Login(ctx *gin.Context, db *pgxpool.Pool) {
 
 }
 
-func ProfileUpdate(ctx *gin.Context, db *pgxpool.Pool) {
-	var input models.ProfileUpdate
-	// --- GET USER IN CONTEXT ---
-	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
-	if !exists {
-		ctx.JSON(401, models.Response{
+// ForgotPassword godoc
+// @Summary Send password reset link to user email
+// @Description Receive user email, create password reset token, store it in Redis, and send email containing password reset link
+// @Tags Auth
+// @Param input body models.ReqForgot true "Email user"
+// @Success 200 {object} models.Response "Reset link successfully sent"
+// @Router /auth/forgot-password [post]
+func ForgotPassword(ctx *gin.Context, db *pgxpool.Pool, rdb *redis.Client) {
+	var input models.ReqForgot
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(400, models.Response{
 			Success: false,
-			Message: "Unauthorized: user not logged in",
+			Message: "invalid email",
 		})
 		return
 	}
 
-	var userID int
-	switch v := userIDInterface.(type) {
-	case int:
-		userID = v
-	case float64:
-		userID = int(v)
-	default:
-		ctx.JSON(401, models.Response{
+	// --- GET USER BY EMAIL ---
+	user, err := models.GetUserByEmail(ctx, db, input.Email)
+	if err != nil {
+		ctx.JSON(400, models.Response{
 			Success: false,
-			Message: "Invalid user ID type in context",
+			Message: "user not found",
 		})
 		return
 	}
+
+	// --- GENEATE RANDOM TOKEN ---
+	token, _ := utils.GenerateRandomToken(32)
+	key := "reset:pwd:" + token
+
+	// --- SAVER RANDOM TOKEN IN REDIS --
+	if err := models.SaveResetToken(ctx.Request.Context(), rdb, key, fmt.Sprintf("%d", user.Id), 15*time.Minute); err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "failed to save token",
+		})
+		fmt.Println(err)
+		return
+	}
+
+	// --- URL ---
+	frontendURL := os.Getenv("FRONTEND_RESET_URL")
+	if frontendURL == "" {
+		frontendURL = "localhost:8011/auth/reset-password"
+	}
+
+	resetLink := fmt.Sprintf("%s?token=%s", frontendURL, token)
+
+	// --- MESSAGE EMAIL ---
+	emailBody := fmt.Sprintf(`
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #4CAF50;">Reset Password</h2>
+        <p>Halo,</p>
+        <p>Anda atau seseorang telah meminta reset password untuk akun Anda. Gunakan token berikut untuk melakukan reset password:</p>
+        <p style="font-size: 20px; font-weight: bold; color: #000;">%s</p>
+        <p>Atau klik tombol berikut untuk langsung ke halaman reset password:</p>
+        <p>
+            <a href="%s" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: #fff; text-decoration: none; border-radius: 5px;">
+                Reset Password
+            </a>
+        </p>
+        <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
+        <p>Salam,<br/>Tim Senja Kopi kiri</p>
+    </div>
+`, token, resetLink)
+
+	err = utils.Send(utils.SendOptions{
+		To:         []string{input.Email},
+		Subject:    "Reset Password",
+		Body:       emailBody,
+		BodyIsHTML: true,
+	})
+
+	// --- ERROR HANDLING ---
+	if err != nil {
+		fmt.Println("SMTP ERROR:", err)
+	} else {
+		fmt.Println("Email sent to:", input.Email)
+	}
+
+	ctx.JSON(200, gin.H{
+		"success":    true,
+		"message":    "Reset link sent to email",
+		"reset_link": resetLink,
+	})
+}
+
+// ResetPassword godoc
+// @Summary Reset user password
+// @Description Resets the password for a user using a valid token. The token must have been issued during the forgot password process.
+// @Tags Auth
+// @Param input body models.ReqResetPassword true "Reset password request"
+// @Success 200 {object} models.ResponseSucces "Password updated successfully"
+// @Router /auth/reset-password [post]
+func ResetPassword(ctx *gin.Context, db *pgxpool.Pool, rdb *redis.Client) {
+	var input models.ReqResetPassword
 
 	// --- VALIDATION ---
 	if err := ctx.ShouldBind(&input); err != nil {
@@ -207,95 +279,51 @@ func ProfileUpdate(ctx *gin.Context, db *pgxpool.Pool) {
 
 		ctx.JSON(400, models.Response{
 			Success: false,
-			Message: "invalid FORM format",
+			Message: "invalid JSON format",
 		})
 		return
 	}
 
-	// --- CHECKING CLAIMS TOKEN ---
-	claims, exists := ctx.Get("claims")
-	if !exists {
-		fmt.Println("ERROR :", !exists)
-		ctx.AbortWithStatusJSON(403, models.Response{
-			Success: false,
-			Message: "Please log in again",
-		})
-		return
-	}
-	user, ok := claims.(libs.Claims)
-	if !ok {
-		fmt.Println("ERROR", !ok)
-		ctx.AbortWithStatusJSON(500, models.Response{
-			Success: false,
-			Message: "An error occurred!, please try again.",
-		})
-		return
-	}
-
-	// --- UPLOAD PHOTO ---
-	if input.Photos != nil {
-		savePath, generatedFilename, err := utils.UploadImageFile(ctx, input.Photos, "public", fmt.Sprintf("user_%d", user.ID))
-		if err != nil {
-			log.Println("Upload image failed:", err)
-			ctx.JSON(400, models.Response{
-				Success: false,
-				Message: err.Error(),
-			})
-			return
-		}
-		if err := ctx.SaveUploadedFile(input.Photos, savePath); err != nil {
-			log.Println("Save file failed : ", err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "failed to save image",
-			})
-			return
-		}
-		input.PhotosStr = &generatedFilename
-	}
-
-	// --- CHECKING ROWS UPDATE ---
-	if libs.IsStructEmptyExcept(input, "Id") && (input.PhotosStr == nil || *input.PhotosStr == "") {
+	// --- GET USER ID FROM TOKEN ---
+	key := "reset:pwd:" + input.Token
+	userIDStr, err := models.GetUserIDFromToken(ctx, rdb, key)
+	if err != nil {
 		ctx.JSON(400, models.Response{
 			Success: false,
-			Message: "No data to update",
+			Message: "invalid or expired token",
 		})
 		return
 	}
 
-	// ---- LIMITS QUERY EXECUTION TIME ---
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	users, err := models.UpdateProfile(ctxTimeout, db, input, userID)
+	userID, _ := strconv.Atoi(userIDStr)
+
+	// --- HASH NEW PASSWORD ---
+	hashed, err := libs.HashPassword(input.NewPassword)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			ctx.JSON(404, models.Response{
-				Success: false,
-				Message: "user not found",
-			})
-			return
-		}
-		fmt.Println("error :", err)
 		ctx.JSON(500, models.Response{
 			Success: false,
-			Message: "Failed to update user",
+			Message: "failed to hash password",
 		})
 		return
 	}
 
-	// ---- ASIGN RESPONSE ---
-	response := gin.H{
-		"id":       users.Id,
-		"fullname": users.Fullname,
-		"email":    users.Email,
-		"photos":   users.PhotosStr,
-		"address":  users.Address,
-		"phone":    users.Phone,
+	// --- UPDATE PASSWORD BY USER ID ---
+	if err := models.UpdatePasswordByID(ctx, db, userID, hashed); err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "failed to update password",
+		})
+		return
 	}
+
+	// --- DELETE TOKEN AFTER USED ---
+	rdb.Del(ctx, key)
+
 	ctx.JSON(200, models.ResponseSucces{
 		Success: true,
-		Message: "Update Profile Succesfully",
-		Result:  response,
+		Message: "password updated successfully",
+		Result: gin.H{
+			"iduser": userID,
+		},
 	})
-
 }

@@ -1,5 +1,41 @@
 basePath: /
 definitions:
+  models.ReqForgot:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  models.ReqResetPassword:
+    properties:
+      new_password:
+        type: string
+      token:
+        type: string
+    required:
+    - token
+    type: object
+  models.ReqUpdatePassword:
+    properties:
+      confirm_password:
+        type: string
+      new_password:
+        type: string
+      old_password:
+        type: string
+    required:
+    - confirm_password
+    - new_password
+    - old_password
+    type: object
+  models.Response:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
   models.ResponseSucces:
     properties:
       message:
@@ -11,7 +47,7 @@ definitions:
   models.UpdateStatusRequest:
     properties:
       status:
-        type: boolean
+        type: integer
     type: object
   utils.CategoriesRequest:
     properties:
@@ -474,6 +510,25 @@ paths:
       summary: Edit an existing user
       tags:
       - Users
+  /auth/forgot-password:
+    post:
+      description: Receive user email, create password reset token, store it in Redis,
+        and send email containing password reset link
+      parameters:
+      - description: Email user
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqForgot'
+      responses:
+        "200":
+          description: Reset link successfully sent
+          schema:
+            $ref: '#/definitions/models.Response'
+      summary: Send password reset link to user email
+      tags:
+      - Auth
   /auth/login:
     post:
       description: Login user and get JWT token
@@ -510,6 +565,96 @@ paths:
       summary: Register user
       tags:
       - Auth
+  /auth/reset-password:
+    post:
+      description: Resets the password for a user using a valid token. The token must
+        have been issued during the forgot password process.
+      parameters:
+      - description: Reset password request
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqResetPassword'
+      responses:
+        "200":
+          description: Password updated successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      summary: Reset user password
+      tags:
+      - Auth
+  /favorite-product:
+    get:
+      description: Get paginated list of products with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      summary: Get list products Favorite
+      tags:
+      - Products
+  /profile:
+    patch:
+      description: Update user profile including fullname, phone, address, email,
+        and photo
+      parameters:
+      - description: Full name of the user
+        in: formData
+        name: fullname
+        type: string
+      - description: Phone number of the user
+        in: formData
+        name: phone
+        type: string
+      - description: Address of the user
+        in: formData
+        name: address
+        type: string
+      - description: Email of the user
+        in: formData
+        name: email
+        type: string
+      - description: Profile photo file
+        in: formData
+        name: photos
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - Profile
+    put:
+      description: Update password for the logged-in user
+      parameters:
+      - description: Password update data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReqUpdatePassword'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
+      summary: Update user password
+      tags:
+      - Profile
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.

@@ -3,13 +3,17 @@ package models
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
-	"mime/multipart"
-	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+)
+
+var (
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 )
 
 type AuthRegister struct {
@@ -26,14 +30,19 @@ type AuthLogin struct {
 	Role     string `json:"role,omitempty"`
 }
 
-type ProfileUpdate struct {
-	Id        int                   `form:"id"`
-	Fullname  *string               `form:"fullname" binding:"omitempty,max=30"`
-	Email     *string               `form:"email" binding:"omitempty,email"`
-	Phone     *string               `form:"phone" binding:"omitempty,max=12"`
-	Address   *string               `form:"address" binding:"omitempty,max=50"`
-	Photos    *multipart.FileHeader `form:"photos"`
-	PhotosStr *string               `form:"photosStr,omitempty"`
+type Users struct {
+	Id       int    `json:"id"`
+	Email    string `json:"email" binding:"email"`
+	Password string `json:"password" binding:"password_complex"`
+}
+
+type ReqResetPassword struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"password_complex"`
+}
+
+type ReqForgot struct {
+	Email string `json:"email" binding:"required,email"`
 }
 
 func Register(ctx context.Context, db *pgxpool.Pool, hashed string, user AuthRegister) (AuthRegister, error) {
@@ -90,84 +99,35 @@ func Login(ctx context.Context, db *pgxpool.Pool, email string) (AuthLogin, erro
 	return user, nil
 }
 
-func UpdateProfile(ctx context.Context, db *pgxpool.Pool, input ProfileUpdate, Id int) (ProfileUpdate, error) {
-	// --- START QUERY TRANSACTION ---
-	tx, err := db.Begin(ctx)
+// ----- GET USER BY EMAIL -----
+func GetUserByEmail(ctx context.Context, db *pgxpool.Pool, email string) (*Users, error) {
+	query := "SELECT id, email, password FROM users WHERE email=$1"
+	var user Users
+	if err := db.QueryRow(ctx, query, email).Scan(&user.Id, &user.Email, &user.Password); err != nil {
+		return nil, errors.New("user not found")
+	}
+	return &user, nil
+}
+
+// --- SAVE TOKEN FOR RESET PASSWORD ---
+func SaveResetToken(ctx context.Context, rdb *redis.Client, key, userID string, ttl time.Duration) error {
+	return rdb.Set(ctx, key, userID, ttl).Err()
+}
+
+// --- GET USER ID FROM TOKEN REDIS ---
+func GetUserIDFromToken(ctx context.Context, rdb *redis.Client, key string) (string, error) {
+	val, err := rdb.Get(ctx, key).Result()
 	if err != nil {
-		return ProfileUpdate{}, err
+		return "", errors.New("invalid or expired token")
 	}
-	defer tx.Rollback(ctx)
+	return val, nil
+}
 
-	// --- DYNAMIC SET USER ---
-	setClauses := []string{}
-	args := []any{}
-	idx := 1
-
-	if input.Fullname != nil {
-		setClauses = append(setClauses, fmt.Sprintf("fullname=$%d", idx))
-		args = append(args, *input.Fullname)
-		idx++
-	}
-
-	if input.Phone != nil {
-		setClauses = append(setClauses, fmt.Sprintf("phoneNumber=$%d", idx))
-		args = append(args, *input.Phone)
-		idx++
-	}
-
-	if input.Address != nil {
-		setClauses = append(setClauses, fmt.Sprintf("address=$%d", idx))
-		args = append(args, *input.Address)
-		idx++
-	}
-
-	if input.PhotosStr != nil {
-		setClauses = append(setClauses, fmt.Sprintf("photos=$%d", idx))
-		args = append(args, *input.PhotosStr)
-		idx++
-	}
-
-	if len(setClauses) > 0 {
-		query := fmt.Sprintf("UPDATE account SET %s WHERE id=$%d", strings.Join(setClauses, ","), idx)
-		args = append(args, Id)
-		_, err := tx.Exec(ctx, query, args...)
-		if err != nil {
-			log.Println("Failed to update account:", err)
-			return ProfileUpdate{}, err
-		}
-	}
-
-	// --- GET UPDATED DATA ---
-	var updated ProfileUpdate
-	querySelect := `
-		SELECT 
-		u.id,
-        u.email,
-		COALESCE(a.fullname, '-'),
-		COALESCE(a.phoneNumber, '-'),
-		COALESCE(a.address, '-'),
-		COALESCE(a.photos, '-')
-	FROM account a
-	JOIN users u ON u.id = a.id_users
-	WHERE a.id = $1
-	`
-	if err := tx.QueryRow(ctx, querySelect, Id).Scan(
-		&updated.Id,
-		&updated.Email,
-		&updated.Fullname,
-		&updated.Phone,
-		&updated.Address,
-		&updated.PhotosStr,
-	); err != nil {
-		log.Println("Failed to fetch updated user:", err)
-		return ProfileUpdate{}, err
-	}
-
-	// --- COMMIT TRANSACTION ---
-	if err := tx.Commit(ctx); err != nil {
-		log.Println("Failed to commit transaction:", err)
-		return ProfileUpdate{}, err
-	}
-
-	return updated, nil
+// --- UPDATE PASSWORD ---
+func UpdatePasswordByID(ctx context.Context, db *pgxpool.Pool, userID int, hashedPassword string) error {
+	_, err := db.Exec(ctx,
+		"UPDATE users SET password = $1 WHERE id = $2",
+		hashedPassword, userID,
+	)
+	return err
 }

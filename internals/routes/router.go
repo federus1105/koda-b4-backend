@@ -24,13 +24,14 @@ func InitRouter(db *pgxpool.Pool, rd *redis.Client) *gin.Engine {
 	router.Static("/img", "public")
 
 	// --- ROUTE ---
-	InitAuthRouter(router, db)
+	InitAuthRouter(router, db, rd)
 	InitProductRouter(router, db, rd)
 	InitOrderRouter(router, db)
 	InitUserRoute(router, db)
 	InitCategoriesRouter(router, db)
 	InitOrderClientRoutes(router, db)
 	InitHistoryRouter(router, db)
+	InitProfileRouter(router, db)
 
 	router.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(404, models.Response{
