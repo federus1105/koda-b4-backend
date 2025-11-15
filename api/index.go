@@ -21,7 +21,7 @@ func init() {
 		panic("DB connection failed: " + err.Error())
 	}
 
-	rdb, _, err := configs.InitRedis()
+	rdb, err := configs.NewRedis()
 	if err != nil {
 		panic("Redis connection failed: " + err.Error())
 	}
