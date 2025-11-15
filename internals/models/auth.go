@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"mime/multipart"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,16 +21,6 @@ type AuthLogin struct {
 	Email    string `json:"email"  binding:"required,email"`
 	Password string `json:"password" binding:"required,password_complex"`
 	Role     string `json:"role,omitempty"`
-}
-
-type ProfileUpdate struct {
-	Id        int                   `form:"id"`
-	Fullname  *string               `form:"fullname" binding:"omitempty,max=30"`
-	Email     *string               `form:"email" binding:"omitempty,email"`
-	Phone     *string               `form:"phone" binding:"omitempty,max=12"`
-	Address   *string               `form:"address" binding:"omitempty,max=50"`
-	Photos    *multipart.FileHeader `form:"photos"`
-	PhotosStr *string               `form:"photosStr,omitempty"`
 }
 
 func Register(ctx context.Context, db *pgxpool.Pool, hashed string, user AuthRegister) (AuthRegister, error) {
