@@ -7,6 +7,8 @@ import (
 	"mime/multipart"
 	"strings"
 
+	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
+	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,6 +20,12 @@ type ProfileUpdate struct {
 	Address   *string               `form:"address" binding:"omitempty,max=50"`
 	Photos    *multipart.FileHeader `form:"photos"`
 	PhotosStr *string               `form:"photosStr,omitempty"`
+}
+
+type ReqUpdatePassword struct {
+	OldPassword     string `json:"old_password"  binding:"required"`
+	NewPassword     string `json:"new_password"  binding:"required,password_complex"`
+	ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=NewPassword"`
 }
 
 func UpdateProfile(ctx context.Context, db *pgxpool.Pool, input ProfileUpdate, Id int) (ProfileUpdate, error) {
@@ -110,4 +118,42 @@ func UpdateProfile(ctx context.Context, db *pgxpool.Pool, input ProfileUpdate, I
 	}
 
 	return updated, nil
+}
+
+func UpdatePassword(ctx context.Context, db *pgxpool.Pool, userID int, oldPassword, newPassword string) error {
+	// --- GET PASSWORD ---
+	var hashedDB string
+	err := db.QueryRow(ctx, "SELECT password FROM users WHERE id = $1", userID).Scan(&hashedDB)
+	if err != nil {
+		log.Println("Failed to get current password hash:", err)
+		return fmt.Errorf(" %w user not found", utils.ErrValidation)
+	}
+
+	// --- VERIFICATION OLD PASSWORD ---
+	ok, err := libs.VerifyPassword(oldPassword, hashedDB)
+	if err != nil {
+		log.Println("Error verifying old password:", err)
+		return fmt.Errorf("%w, failed verification old password", utils.ErrValidation)
+	}
+	if !ok {
+		return fmt.Errorf("%w the old password doesn't match", utils.ErrValidation)
+	}
+
+	// --- HASH NEW PASSWORD ---
+	newHashed, err := libs.HashPassword(newPassword)
+	if err != nil {
+		log.Println("Failed to hash new password:", err)
+		return fmt.Errorf("%w failed hash new password", utils.ErrValidation)
+	}
+
+	// --- UPDATE PASSWORD ---
+	cmdTag, err := db.Exec(ctx, "UPDATE users SET password = $1 WHERE id = $2", newHashed, userID)
+	if err != nil {
+		log.Println("Failed to update password:", err)
+		return fmt.Errorf("failed update password")
+	}
+	if cmdTag.RowsAffected() != 1 {
+		return fmt.Errorf(" %w failed update password, user not found", utils.ErrValidation)
+	}
+	return nil
 }
