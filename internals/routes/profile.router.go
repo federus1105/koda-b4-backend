@@ -8,9 +8,13 @@ import (
 )
 
 func InitProfileRouter(router *gin.Engine, db *pgxpool.Pool) {
-	profileRouter := router.Group("")
+	profileRouter := router.Group("/profile")
 
-	profileRouter.PATCH("/profile", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
+	profileRouter.PATCH("", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
 		controllers.ProfileUpdate(ctx, db)
+	})
+
+	profileRouter.PUT("", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
+		controllers.UpdatePassword(ctx, db)
 	})
 }
