@@ -71,7 +71,7 @@ func GetListCategories(ctx *gin.Context, db *pgxpool.Pool) {
 
 	// --- QUERY PARAMS ---
 
-	baseURL := "/favorite-product"
+	baseURL := "/admin/categories"
 	// --- PREV ---
 	if page > 1 {
 		url := fmt.Sprintf("%s?page=%d", baseURL, page-1)
