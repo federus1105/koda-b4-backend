@@ -19,3 +19,8 @@ func InitDB() (*pgxpool.Pool, error) {
 	log.Println(connstring)
 	return pgxpool.New(context.Background(), connstring)
 }
+
+func ConnectDB() (*pgxpool.Pool, error) {
+	url := os.Getenv("DATABASE_URL")
+	return pgxpool.New(context.Background(), url)
+}

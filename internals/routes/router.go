@@ -12,16 +12,14 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func InitRouter(db *pgxpool.Pool, rd *redis.Client) *gin.Engine {
-	router := gin.Default()
+func InitRouter(app *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 	utils.InitValidator()
-	router.Use(gin.Recovery())
 
 	// --- SWAGGER ---
 	docs.SwaggerInfo.BasePath = "/"
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
-	router.Static("/img", "public")
+	app.Static("/img", "public")
 
 	// --- ROUTE ---
 	InitAuthRouter(router, db, rd)
@@ -39,6 +37,5 @@ func InitRouter(db *pgxpool.Pool, rd *redis.Client) *gin.Engine {
 			Message: "Route Not Found, Try Again!",
 		})
 	})
-	return router
 
 }
