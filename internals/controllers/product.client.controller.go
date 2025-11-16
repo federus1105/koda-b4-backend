@@ -20,6 +20,7 @@ import (
 // @Param page query int false "Page number" default(1)
 // @Success 200 {object} models.ResponseSucces
 // @Router /favorite-product [get]
+// @Security BearerAuth
 func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
@@ -61,6 +62,20 @@ func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// GetListProductFilter godoc
+// @Summary Get filtered product list
+// @Description Retrieves a list of products using filters such as name, category, price range, sorting, and pagination.
+// @Tags Products
+// @Param page query int false "Page number (default: 1)"
+// @Param name query string false "Search by product name"
+// @Param category query []int false "Filter by category IDs (can be multiple)"
+// @Param min_price query number false "Minimum price"
+// @Param max_price query number false "Maximum price"
+// @Param sort_by query string false "Sort by criteria (price_asc, price_desc, latest, oldest)"
+// @Success 200 {object} models.ResponseSucces "Successful response with product list"
+// @Failure 500 {object} models.Response "Failed to retrieve product list"
+// @Router /product [get]
+// @Security BearerAuth
 func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
@@ -103,9 +118,9 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 
 	products, err := models.GetListProductFilter(ctxTimeout, db, name, categoryIDs, minPrice, maxPrice, sortBy, limit, offset)
 	if err != nil {
-		ctx.JSON(500, gin.H{
-			"success": false,
-			"message": "Failed Get list data products",
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed Get list data products",
 		})
 		fmt.Println("Error : ", err.Error())
 		return
@@ -121,13 +136,23 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
-	ctx.JSON(200, gin.H{
-		"success": true,
-		"message": "Get data successfully",
-		"result":  products,
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Get data successfully",
+		Result:  products,
 	})
 }
 
+// GetProductById godoc
+// @Summary Get product by ID
+// @Description Retrieves detailed information about a product using its ID.
+// @Tags Products
+// @Param id path int true "Product ID"
+// @Success 200 {object} models.ResponseSucces "Product retrieved successfully"
+// @Failure 404 {object} models.Response "Product not found or invalid product ID"
+// @Failure 500 {object} models.Response "Failed to retrieve product"
+// @Router /product/{id} [get]
+// @Security BearerAuth
 func GetProductById(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET PORDUCT ID ---
 	productIDstr := ctx.Param("id")

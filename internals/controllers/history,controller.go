@@ -14,6 +14,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// GetHistory godoc
+// @Summary Get user transaction/history list
+// @Description Retrieves a history list of the currently logged in user with filters and pagination.
+// @Tags History
+// @Param month query int false "Filter bulan (1-12)"
+// @Param status query int false "Filter status history"
+// @Param page query int false "Page number (default: 1)"
+// @Success 200 {object} models.ResponseSucces
+// @Failure 401 {object} models.Response
+// @Failure 500 {object} models.Response
+// @Router /history [get]
+// @Security BearerAuth
 func GetHistory(ctx *gin.Context, db *pgxpool.Pool) {
 
 	// --- GET USER IN CONTEXT ---
@@ -89,6 +101,17 @@ func GetHistory(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// DetailHistory godoc
+// @Summary Get detail history
+// @Description Retrieve history details by ID (user must be logged in)
+// @Tags History
+// @Param id path int true "History ID"
+// @Success 200 {object} models.ResponseSucces "Success"
+// @Failure 401 {object} models.Response "Unauthorized"
+// @Failure 404 {object} models.Response "Not Found"
+// @Failure 500 {object} models.Response "Internal Server Error"
+// @Router /history/{id} [get]
+// @Security BearerAuth
 func DetailHistory(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- GET HISTORY ID ---
 	historyIDStr := ctx.Param("id")

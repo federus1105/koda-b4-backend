@@ -1,5 +1,18 @@
 basePath: /
 definitions:
+  models.CartItemRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+      size:
+        maximum: 3
+        type: integer
+      variant:
+        maximum: 2
+        type: integer
+    type: object
   models.ReqForgot:
     properties:
       email:
@@ -71,6 +84,25 @@ definitions:
       fullname:
         type: string
       password:
+        type: string
+    type: object
+  utils.RequestTransactions:
+    properties:
+      address:
+        example: jakarta
+        type: string
+      email:
+        example: youremail@gmail.com
+        type: string
+      fullname:
+        example: fullname
+        type: string
+      id_delivery:
+        type: integer
+      id_paymentMethod:
+        type: integer
+      phone:
+        example: "081234567890"
         type: string
     type: object
 host: localhost:8011
@@ -584,6 +616,63 @@ paths:
       summary: Reset user password
       tags:
       - Auth
+  /cart:
+    get:
+      description: Gets a list of products in the cart of the logged in user.
+      responses:
+        "200":
+          description: Cart data retrieved successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "401":
+          description: User ID not found in context
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Failed get data carts
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Get cart products
+      tags:
+      - Cart
+    post:
+      description: Adding products to the cart of the logged in user
+      parameters:
+      - description: Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CartItemRequest'
+      responses:
+        "200":
+          description: Product added to cart successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "400":
+          description: Invalid JSON, validation error, out of stock, or insufficient
+            stock
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: 'Unauthorized: user not logged in'
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: Product not found
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Add product to cart
+      tags:
+      - Cart
   /favorite-product:
     get:
       description: Get paginated list of products with pagination
@@ -598,7 +687,148 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.ResponseSucces'
+      security:
+      - BearerAuth: []
       summary: Get list products Favorite
+      tags:
+      - Products
+  /history:
+    get:
+      description: Retrieves a history list of the currently logged in user with filters
+        and pagination.
+      parameters:
+      - description: Filter bulan (1-12)
+        in: query
+        name: month
+        type: integer
+      - description: Filter status history
+        in: query
+        name: status
+        type: integer
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user transaction/history list
+      tags:
+      - History
+  /history/{id}:
+    get:
+      description: Retrieve history details by ID (user must be logged in)
+      parameters:
+      - description: History ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Get detail history
+      tags:
+      - History
+  /product:
+    get:
+      description: Retrieves a list of products using filters such as name, category,
+        price range, sorting, and pagination.
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: Search by product name
+        in: query
+        name: name
+        type: string
+      - collectionFormat: csv
+        description: Filter by category IDs (can be multiple)
+        in: query
+        items:
+          type: integer
+        name: category
+        type: array
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: number
+      - description: Sort by criteria (price_asc, price_desc, latest, oldest)
+        in: query
+        name: sort_by
+        type: string
+      responses:
+        "200":
+          description: Successful response with product list
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "500":
+          description: Failed to retrieve product list
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Get filtered product list
+      tags:
+      - Products
+  /product/{id}:
+    get:
+      description: Retrieves detailed information about a product using its ID.
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Product retrieved successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "404":
+          description: Product not found or invalid product ID
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Failed to retrieve product
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Get product by ID
       tags:
       - Products
   /profile:
@@ -655,6 +885,39 @@ paths:
       summary: Update user password
       tags:
       - Profile
+  /transactions:
+    post:
+      description: Performs a transaction for the authenticated user. Includes validation
+        and business logic checks.
+      parameters:
+      - description: Transaction Request Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/utils.RequestTransactions'
+      responses:
+        "200":
+          description: Transaction completed successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "400":
+          description: Validation error or invalid JSON format
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: 'Unauthorized: user not logged in'
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Process a transaction
+      tags:
+      - Transactions
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.

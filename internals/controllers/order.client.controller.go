@@ -16,6 +16,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// CreateCartProduct godoc
+// @Summary Add product to cart
+// @Description Adding products to the cart of the logged in user
+// @Tags Cart
+// @Param request body models.CartItemRequest true "Request Body"
+// @Success 200 {object} models.ResponseSucces "Product added to cart successfully"
+// @Failure 400 {object} models.Response "Invalid JSON, validation error, out of stock, or insufficient stock"
+// @Failure 401 {object} models.Response "Unauthorized: user not logged in"
+// @Failure 404 {object} models.Response "Product not found"
+// @Failure 500 {object} models.Response "Internal server error"
+// @Router /cart [post]
+// @Security BearerAuth
 func CreateCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	var input models.CartItemRequest
 
@@ -110,6 +122,15 @@ func CreateCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// GetCartProduct godoc
+// @Summary Get cart products
+// @Description Gets a list of products in the cart of the logged in user.
+// @Tags Cart
+// @Success 200 {object} models.ResponseSucces "Cart data retrieved successfully"
+// @Failure 401 {object} models.Response "User ID not found in context"
+// @Failure 500 {object} models.Response "Failed get data carts"
+// @Router /cart [get]
+// @Security BearerAuth
 func GetCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	userIDRaw, exists := ctx.Get(middlewares.UserIDKey)
 	// --- CHECKING IN CONTEXT ---
@@ -150,6 +171,17 @@ func GetCartProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 }
 
+// Transactions godoc
+// @Summary Process a transaction
+// @Description Performs a transaction for the authenticated user. Includes validation and business logic checks.
+// @Tags Transactions
+// @Param request body utils.RequestTransactions true "Transaction Request Body"
+// @Success 200 {object} models.ResponseSucces "Transaction completed successfully"
+// @Failure 400 {object} models.Response "Validation error or invalid JSON format"
+// @Failure 401 {object} models.Response "Unauthorized: user not logged in"
+// @Failure 500 {object} models.Response "Internal server error"
+// @Router /transactions [post]
+// @Security BearerAuth
 func Transactions(ctx *gin.Context, db *pgxpool.Pool) {
 	var input models.TransactionsInput
 
