@@ -1,11 +1,11 @@
-#  ☕ Coffee Shop Admin Backend API
-> Coffee Shop Admin Backend is a backend API designed to manage coffee shop administration systems from product management, orders, users, to uploading product images in multiple files. Built with an efficient, secure, and easily scalable architecture to meet the needs of a growing coffee business.
+#  ☕ Coffee Shop Senja Kopi Kiri
+> The Senja Kopi Kiri app allows users to order coffee products directly through the app, from adding products to their cart, making payments using available payment methods, to viewing their order history and details. Users can also update information on their profile page for a more personalized and flexible experience. Furthermore, the app supports a forgot password feature, where users can request a password reset and receive a token via their registered email. The system has two roles: user and admin, with the admin responsible for managing the categories and products available in the app.
 
  
 ## 📸 Preview
 ### Swagger Documentation
-![alt text](/db//erd//image.png)
-### Table ERD Coffe-shop
+![alt text](/assets/swagger.png)
+### Table ERD Coffe-shop Senja Kopi Kiri
 ```mermaid
 erDiagram
 ROLE {
@@ -189,20 +189,23 @@ STATUS {
 ## Redis Cache Overview ⚡
 | Status                 | Description                                                                                        | Response Time | Screenshot                                      |
 | ---------------------- | ------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------- |
-| **Before Using Cache** | Data is still taken directly from the database, so it takes quite a long time. | ⏳ Slow          | ![alt text](</docs/images/before.png>) |
-| **After Using Cache**  | Data is taken from Redis Cache so the process becomes faster.                  | ⚡ Fast     | ![alt text](</docs/images/after.png>) |
+| **Before Using Cache** | Data is still taken directly from the database, so it takes quite a long time. | ⏳ Slow          | ![alt text](</assets/before_using_redis.png>) |
+| **After Using Cache**  | Data is taken from Redis Cache so the process becomes faster.                  | ⚡ Fast     | ![alt text](</assets/after_using_redis.png>) |
 
 <br>
 
-## 🚀 Features
+🚀 Features
 - 🔐 JWT Authentication (Login & Register)
-- ✨ Multiple File Upload
-- 📘 Swagger Auto-Generated API Docs
-- 🧾 CRUD for resources
-- 📦 Manajemen Products, Orders & Users
-- 🗂️ MVC architecture
-- 📦 PostgreSQL integration
-- 👤 Autentikasi & Otorisasi Admin
+- 🔑 Forgot Password via Email Token
+- 🛒 Order Management (Add to Cart, Checkout, Payment)
+- 🧾 View Order History & Order Details
+- 👤 User Profile Management (Update Personal Information)
+- 🛠️ Admin Management for Categories & Products
+- ✨ Multiple File Upload (e.g., product images)
+- 📘 Swagger Auto-Generated API Documentation
+- 🗂️ MVC Architecture
+- 📦 PostgreSQL Integration
+- 👤 Role-Based Authentication & Authorization (User & Admin)
 
 
 ## 🛠️ Tech Stack
@@ -210,32 +213,59 @@ STATUS {
 ![Gin](https://img.shields.io/badge/-Gin-00ADD8?logo=go&logoColor=white&style=for-the-badge)
 ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-4169E1?logo=postgresql&logoColor=white&style=for-the-badge)
 ![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?logo=swagger&logoColor=black&style=for-the-badge)
+![JWT](https://img.shields.io/badge/JWT-000000?logo=jsonwebtokens&logoColor=white&style=for-the-badge)
+![Argon2](https://img.shields.io/badge/Argon2-0A7E8C?style=for-the-badge)
+![Go Migrate](https://img.shields.io/badge/Go%20Migrate-01B3E3?logo=go&logoColor=white&style=for-the-badge)
+![Go Mail](https://img.shields.io/badge/Go%20Mail-00ADD8?logo=go&logoColor=white&style=for-the-badge)
+
 
 ##  🔐 .env Configuration
 ```
+# Database
 DBUSER=youruser
 DBPASS=yourpass
 DBHOST=localhost
 DBPORT=5432
 DBNAME=tickitz
 
+# JWT hash
 JWT_SECRET=your_jwt_secret
+
+# Redish
+REDISUSER=<redis_user>
+REDISPASS=<redis_pass>
+REDISPORT=6379
+REDISHOST=<redis_host>
+
+# Vercel
+DATABASE_URL=<your_url_database>
+REDIS_URL=<your_redis_url>
+
+# SMTP
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=<your_email>
+SMTP_PASS=<your_app_password_email>
+SMTP_FROM=<aplication-name> <your_email> # from
+FRONTEND_URL=<your_frontend_url>
 ```
 
 ## 📦 How to Install & Run Project
-### First, clone this repository: 
+### 1. First, clone this repository: 
 ```
 https://github.com/federus1105/koda-b4-backend.git
 ```
-### Install Dependencies
+### 2. Install Dependencies
 ```go
 go mod tidy
 ```
-### Run Server/Project
+### 3. Setup your environment
+### 4. Do the Database Migration
+### 5. Run Server/Project
 ```go
 go run .\cmd\main.go 
 ```
-### Init Swagger
+### 6. Init Swagger
 ```go
 swag init -g ./cmd/main.go
 ```
@@ -249,19 +279,19 @@ swag init -g ./cmd/main.go
 
 ## 🗃️ How to run Database Migrations
 ### ⚠️ Attention: This only applies to PostgreSQL, because enums can only be used in PostgreSQL.
-### Install Go migrate
+### 1. Install Go migrate
 ```bash
 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest;
 ```
-### Create database
+### 2. Create database
 ```bash
 CREATE DATABASE <database_name>;
 ```
-### Migrations Up
+### 3. Migrations Up
 ```bash
 migrate -path ./db/migrations -database "postgres://user:password@localhost:5432/database?sslmode=disable" up
 ```
-### Migrations Down
+### 4. Migrations Down
 ```bash
 migrate -path ./db/migrations -database "postgres://user:password@localhost:5432/database?sslmode=disable" down
 ```
