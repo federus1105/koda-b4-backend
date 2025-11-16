@@ -33,6 +33,7 @@ type UserBody struct {
 type UserUpdateBody struct {
 	Id        int                   `form:"id"`
 	Fullname  *string               `form:"fullname" binding:"omitempty,max=30"`
+	Email     *string               `form:"email" binding:"email"`
 	Phone     *string               `form:"phone" binding:"omitempty,max=12"`
 	Address   *string               `form:"address" binding:"omitempty,max=50"`
 	Photos    *multipart.FileHeader `form:"photos"`
@@ -181,6 +182,16 @@ func EditUser(ctx context.Context, db *pgxpool.Pool, body UserUpdateBody, id int
 		_, err := tx.Exec(ctx, query, args...)
 		if err != nil {
 			log.Println("Failed to update account:", err)
+			return UserBody{}, err
+		}
+	}
+
+	// --- UPDATE EMAIL DI USERS TABLE ---
+	if body.Email != nil {
+		queryEmail := `UPDATE users SET email=$1 WHERE id=$2`
+		_, err := tx.Exec(ctx, queryEmail, *body.Email, id)
+		if err != nil {
+			log.Println("Failed to update email:", err)
 			return UserBody{}, err
 		}
 	}

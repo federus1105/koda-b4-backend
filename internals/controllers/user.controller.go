@@ -323,6 +323,7 @@ func EditUser(ctx *gin.Context, db *pgxpool.Pool) {
 		"photos":   users.PhotosStr,
 		"address":  users.Address,
 		"phone":    users.Phone,
+		"email":    users.Email,
 	}
 	ctx.JSON(200, models.ResponseSucces{
 		Success: true,
