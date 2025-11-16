@@ -252,3 +252,57 @@ func UpdatePassword(ctx *gin.Context, db *pgxpool.Pool) {
 	})
 
 }
+
+// Profile godoc
+// @Summary Get user profile
+// @Description Get user profile data based on the currently logged in user.
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.ResponseSucces "get Profile successfully"
+// @Failure 401 {object} models.Response "Unauthorized: user not logged in"
+// @Failure 500 {object} models.Response "Internal server error"
+// @Router /profile [get]
+func Profile(ctx *gin.Context, db *pgxpool.Pool) {
+	// --- GET USER IN CONTEXT ---
+	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
+	if !exists {
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Unauthorized: user not logged in",
+		})
+		return
+	}
+
+	var userID int
+	switch v := userIDInterface.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	default:
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Invalid user ID type in context",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	profile, err := models.Profile(ctxTimeout, db, userID)
+	if err != nil {
+		fmt.Println("error :", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "internal server error",
+		})
+		return
+	}
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "get Profile Succesfully",
+		Result:  profile,
+	})
+}

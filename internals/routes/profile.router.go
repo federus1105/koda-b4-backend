@@ -17,4 +17,8 @@ func InitProfileRouter(router *gin.Engine, db *pgxpool.Pool) {
 	profileRouter.PUT("", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
 		controllers.UpdatePassword(ctx, db)
 	})
+
+	profileRouter.GET("", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
+		controllers.Profile(ctx, db)
+	})
 }

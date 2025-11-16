@@ -28,6 +28,15 @@ type ReqUpdatePassword struct {
 	ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=NewPassword"`
 }
 
+type Profiles struct {
+	Id       int     `json:"id"`
+	Fullname string  `json:"fullname"`
+	Phone    *string `json:"phone"`
+	Address  *string `json:"address"`
+	Photos   *string `json:"photos"`
+	Email    string  `json:"email"`
+}
+
 func UpdateProfile(ctx context.Context, db *pgxpool.Pool, input ProfileUpdate, Id int) (ProfileUpdate, error) {
 	// --- START QUERY TRANSACTION ---
 	tx, err := db.Begin(ctx)
@@ -156,4 +165,28 @@ func UpdatePassword(ctx context.Context, db *pgxpool.Pool, userID int, oldPasswo
 		return fmt.Errorf(" %w failed update password, user not found", utils.ErrValidation)
 	}
 	return nil
+}
+
+func Profile(ctx context.Context, db *pgxpool.Pool, userId int) (Profiles, error) {
+	var profile Profiles
+	sql := `SELECT a.id, a.fullname, 
+	a.phonenumber, a.address, 
+	a.photos, u.email FROM account a
+	JOIN users u ON u.id = a.id_users
+	WHERE u.id = $1`
+
+	err := db.QueryRow(ctx, sql, userId).Scan(
+		&profile.Id,
+		&profile.Fullname,
+		&profile.Phone,
+		&profile.Address,
+		&profile.Photos,
+		&profile.Email,
+	)
+
+	if err != nil {
+		return profile, err
+	}
+
+	return profile, nil
 }
