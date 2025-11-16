@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +45,17 @@ func GetListUser(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// --- TOTAL USERS  ---
+	total, err := models.GetCountUser(ctxTimeout, db, name)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get total users",
+		})
+		return
+	}
+
 	users, err := models.GetListUser(ctxTimeout, db, name, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
@@ -53,6 +66,29 @@ func GetListUser(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
+	// --- TOTAL PAGES ---
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	var prevURL, nextURL *string
+	baseURL := "/admin/user"
+	q := url.Values{}
+	if name != "" {
+		q.Set("name", name)
+	}
+
+	// --- PREV ---
+	if page > 1 {
+		p := page - 1
+		u := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), p)
+		prevURL = &u
+	}
+
+	// --- NEXT ---
+	if page < totalPages {
+		n := page + 1
+		u := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), n)
+		nextURL = &u
+	}
 	// --- VALIDATION FOR LIST USERS ---
 	if len(users) == 0 {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -63,10 +99,14 @@ func GetListUser(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
-	ctx.JSON(200, models.ResponseSucces{
-		Success: true,
-		Message: "Get data succesfully",
-		Result:  users,
+	ctx.JSON(200, models.PaginatedResponse[models.UserList]{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		PrevURL:    prevURL,
+		NextURL:    nextURL,
+		Result:     users,
 	})
 }
 
