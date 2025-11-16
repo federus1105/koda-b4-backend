@@ -506,11 +506,16 @@ func DeleteProduct(ctx context.Context, db *pgxpool.Pool, id int) error {
 	return nil
 }
 
-func GetCountProduct(ctx context.Context, db *pgxpool.Pool) (int64, error) {
+func GetCountProduct(ctx context.Context, db *pgxpool.Pool, name string) (int64, error) {
 	var total int64
 
 	query := "SELECT COUNT(*) FROM product WHERE is_deleted = false"
 	args := []interface{}{}
+
+	if name != "" {
+		query += " AND name ILIKE $1"
+		args = append(args, "%"+name+"%")
+	}
 
 	// --- EXECUTE QUERY ---
 	err := db.QueryRow(ctx, query, args...).Scan(&total)
