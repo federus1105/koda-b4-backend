@@ -673,6 +673,42 @@ paths:
       summary: Add product to cart
       tags:
       - Cart
+  /cart/{id}:
+    delete:
+      description: Delete specific cart item based on cart ID and user ID from JWT
+        token
+      parameters:
+      - description: Cart ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Delete cart successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "400":
+          description: Bad Request - invalid cart ID
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Unauthorized - user not logged in
+          schema:
+            $ref: '#/definitions/models.Response'
+        "404":
+          description: Cart not found
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Failed to delete cart
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete cart item
+      tags:
+      - Cart
   /favorite-product:
     get:
       description: Get paginated list of products with pagination
