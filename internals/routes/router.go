@@ -22,16 +22,16 @@ func InitRouter(app *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 	app.Static("/img", "public")
 
 	// --- ROUTE ---
-	InitAuthRouter(router, db, rd)
-	InitProductRouter(router, db, rd)
-	InitOrderRouter(router, db)
-	InitUserRoute(router, db)
-	InitCategoriesRouter(router, db)
-	InitOrderClientRoutes(router, db)
-	InitHistoryRouter(router, db)
-	InitProfileRouter(router, db)
+	InitAuthRouter(app, db, rd)
+	InitProductRouter(app, db, rd)
+	InitOrderRouter(app, db)
+	InitUserRoute(app, db)
+	InitCategoriesRouter(app, db)
+	InitOrderClientRoutes(app, db)
+	InitHistoryRouter(app, db)
+	InitProfileRouter(app, db)
 
-	router.NoRoute(func(ctx *gin.Context) {
+	app.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(404, models.Response{
 			Success: false,
 			Message: "Route Not Found, Try Again!",
