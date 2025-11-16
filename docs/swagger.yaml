@@ -832,6 +832,28 @@ paths:
       tags:
       - Products
   /profile:
+    get:
+      description: Get user profile data based on the currently logged in user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: get Profile successfully
+          schema:
+            $ref: '#/definitions/models.ResponseSucces'
+        "401":
+          description: 'Unauthorized: user not logged in'
+          schema:
+            $ref: '#/definitions/models.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - User
     patch:
       description: Update user profile including fullname, phone, address, email,
         and photo
