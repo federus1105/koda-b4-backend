@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -258,5 +260,81 @@ func Transactions(ctx *gin.Context, db *pgxpool.Pool) {
 		Success: true,
 		Message: "Transaction completed successfully",
 		Result:  result,
+	})
+}
+
+// DeleteCart godoc
+// @Summary Delete cart item
+// @Description Delete specific cart item based on cart ID and user ID from JWT token
+// @Tags Cart
+// @Security BearerAuth
+// @Param id path int true "Cart ID"
+// @Success 200 {object} models.ResponseSucces "Delete cart successfully"
+// @Failure 400 {object} models.Response "Bad Request - invalid cart ID"
+// @Failure 401 {object} models.Response "Unauthorized - user not logged in"
+// @Failure 404 {object} models.Response "Cart not found"
+// @Failure 500 {object} models.Response "Failed to delete cart"
+// @Router /cart/{id} [delete]
+func DeleteCart(ctx *gin.Context, db *pgxpool.Pool) {
+	cartIDstr := ctx.Param("id")
+	cartID, err := strconv.Atoi(cartIDstr)
+	if err != nil {
+		ctx.JSON(404, models.Response{
+			Success: false,
+			Message: "Cart id not found",
+		})
+		return
+	}
+
+	// --- GET USER IN CONTEXT ---
+	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
+	if !exists {
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Unauthorized: user not logged in",
+		})
+		return
+	}
+
+	var userID int
+	switch v := userIDInterface.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	default:
+		ctx.JSON(401, models.Response{
+			Success: false,
+			Message: "Invalid user ID type in context",
+		})
+		return
+	}
+
+	// ---- LIMITS QUERY EXECUTION TIME ---
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = models.DeleteCart(ctxTimeout, db, userID, cartID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(404, models.Response{
+				Success: false,
+				Message: "cart not found",
+			})
+			return
+		}
+		fmt.Println("error :", err)
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to delete cart",
+		})
+		return
+	}
+
+	ctx.JSON(200, models.ResponseSucces{
+		Success: true,
+		Message: "Delete cart successfully",
+		Result: gin.H{
+			"card_id": cartID,
+		},
 	})
 }
