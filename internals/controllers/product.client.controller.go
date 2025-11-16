@@ -154,8 +154,8 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// --- GET TOTAL COUNT ---
-	total, err := models.GetCountProduct(ctxTimeout, db, "")
+	// --- GET TOTAL PRODUCT ---
+	total, err := models.GetCountProductFilter(ctxTimeout, db, name, categoryIDs, minPrice, maxPrice)
 	if err != nil {
 		ctx.JSON(500, models.Response{
 			Success: false,
@@ -174,38 +174,42 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
-	var prevURL *string
-	var nextURL *string
-
 	// --- TOTAL PAGES ---
 	totalPages := int(math.Ceil(float64(total) / float64(limit)))
 
-	// --- QUERY PARAMS ---
-	queryPrefix := "?"
+	// --- BUILD QUERY PARAMS FOR URL ---
+	q := url.Values{}
 	if name != "" {
-		queryPrefix = "?name=" + url.QueryEscape(name)
+		q.Add("name", name)
+	}
+	for _, id := range categoryIDs {
+		q.Add("category", strconv.Itoa(id))
+	}
+	if minPriceStr != "" {
+		q.Add("min_price", minPriceStr)
+	}
+	if maxPriceStr != "" {
+		q.Add("max_price", maxPriceStr)
+	}
+	if sortBy != "" {
+		q.Add("sort_by", sortBy)
 	}
 
 	baseURL := "/product"
-	// --- PREV ---
+	var prevURL *string
+	var nextURL *string
+
+	// --- PREV URL ---
 	if page > 1 {
 		p := page - 1
-		sep := "&"
-		if queryPrefix == "" {
-			sep = "?"
-		}
-		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, p)
+		url := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), p)
 		prevURL = &url
 	}
 
-	// --- NEXT ---
+	// --- NEXT URL ---
 	if page < totalPages {
 		n := page + 1
-		sep := "&"
-		if queryPrefix == "" {
-			sep = "?"
-		}
-		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, n)
+		url := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), n)
 		nextURL = &url
 	}
 

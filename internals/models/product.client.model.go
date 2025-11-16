@@ -249,6 +249,7 @@ func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (Produ
 	return product, nil
 }
 
+// --- GET COUNT FOR PRODUCT FAVORITE ---
 func GetCountFavoriteProduct(ctx context.Context, db *pgxpool.Pool) (int64, error) {
 	var total int64
 
@@ -261,6 +262,75 @@ func GetCountFavoriteProduct(ctx context.Context, db *pgxpool.Pool) (int64, erro
 
 	err := db.QueryRow(ctx, query).Scan(&total)
 	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+// --- GET COUNT FOR PRODUCT FILTER ---
+func GetCountProductFilter(
+	ctx context.Context,
+	db *pgxpool.Pool,
+	name string,
+	categoryIDs []int,
+	minPrice, maxPrice float64,
+) (int64, error) {
+
+	var total int64
+
+	sql := `
+        SELECT COUNT(DISTINCT p.id)
+        FROM product p
+        JOIN product_categories pc ON p.id = pc.id_product
+        WHERE p.is_deleted = false
+    `
+	args := []interface{}{}
+	argIdx := 1
+
+	// --- FILTER NAME ---
+	if strings.TrimSpace(name) != "" {
+		sql += fmt.Sprintf(" AND p.name ILIKE $%d", argIdx)
+		args = append(args, "%"+name+"%")
+		argIdx++
+	}
+
+	// --- FILTER CATEGORY MULTIPLE AND (match all categories) ---
+	if len(categoryIDs) > 0 {
+		placeholders := make([]string, len(categoryIDs))
+		for i, id := range categoryIDs {
+			placeholders[i] = fmt.Sprintf("$%d", argIdx)
+			args = append(args, id)
+			argIdx++
+		}
+
+		sql += fmt.Sprintf(`
+            AND p.id IN (
+                SELECT id_product
+                FROM product_categories
+                WHERE id_categories IN (%s)
+                GROUP BY id_product
+                HAVING COUNT(DISTINCT id_categories) = %d
+            )
+        `, strings.Join(placeholders, ","), len(categoryIDs))
+	}
+
+	// --- FILTER MIN PRICE ---
+	if minPrice > 0 {
+		sql += fmt.Sprintf(" AND p.priceOriginal >= $%d", argIdx)
+		args = append(args, minPrice)
+		argIdx++
+	}
+
+	// --- FILTER MAX PRICE ---
+	if maxPrice > 0 {
+		sql += fmt.Sprintf(" AND p.priceOriginal <= $%d", argIdx)
+		args = append(args, maxPrice)
+		argIdx++
+	}
+
+	// --- EXEC ---
+	if err := db.QueryRow(ctx, sql, args...).Scan(&total); err != nil {
 		return 0, err
 	}
 
