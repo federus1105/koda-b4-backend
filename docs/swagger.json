@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This is a Documentation API for Admin Pages",
-        "title": "Admin Pages",
+        "description": "This is a Documentation API for Coffeshop Senja Kopi Kiri",
+        "title": "Coffeeshop Senja Kopi Kiri",
         "contact": {},
         "version": "1.0"
     },

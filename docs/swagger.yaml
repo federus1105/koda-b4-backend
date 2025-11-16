@@ -108,8 +108,8 @@ definitions:
 host: localhost:8011
 info:
   contact: {}
-  description: This is a Documentation API for Admin Pages
-  title: Admin Pages
+  description: This is a Documentation API for Coffeshop Senja Kopi Kiri
+  title: Coffeeshop Senja Kopi Kiri
   version: "1.0"
 paths:
   /admin/categories:
