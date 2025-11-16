@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
+	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -35,6 +38,17 @@ func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// --- GET TOTAL COUNT ---
+	total, err := models.GetCountProduct(ctxTimeout, db)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get total product count",
+		})
+		return
+	}
+
 	products, err := models.GetListFavoriteProduct(ctxTimeout, db, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
@@ -45,20 +59,55 @@ func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
+	var prevURL *string
+	var nextURL *string
+
+	// --- TOTAL PAGES ---
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	// --- QUERY PARAMS ---
+	queryPrefix := "?"
+
+	baseURL := "/favorite-product"
+	// --- PREV ---
+	if page > 1 {
+		p := page - 1
+		sep := "&"
+		if queryPrefix == "" {
+			sep = "?"
+		}
+		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, p)
+		prevURL = &url
+	}
+
+	// --- NEXT ---
+	if page < totalPages {
+		n := page + 1
+		sep := "&"
+		if queryPrefix == "" {
+			sep = "?"
+		}
+		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, n)
+		nextURL = &url
+	}
+
 	// --- VALIDATION FOR LIST PRODUCT ---
 	if len(products) == 0 {
-		ctx.JSON(200, gin.H{
+		ctx.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"data":    []string{},
-			"message": "Not found list product favorite",
+			"message": "Not found favorite product",
 		})
 		return
 	}
-
-	ctx.JSON(200, models.ResponseSucces{
-		Success: true,
-		Message: "Get data succesfully",
-		Result:  products,
+	ctx.JSON(200, models.PaginatedResponse[models.FavoriteProduct]{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		PrevURL:    prevURL,
+		NextURL:    nextURL,
+		Result:     products,
 	})
 }
 
@@ -116,6 +165,16 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// --- GET TOTAL COUNT ---
+	total, err := models.GetCountProduct(ctxTimeout, db)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get total product count",
+		})
+		return
+	}
+
 	products, err := models.GetListProductFilter(ctxTimeout, db, name, categoryIDs, minPrice, maxPrice, sortBy, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
@@ -126,20 +185,58 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
+	var prevURL *string
+	var nextURL *string
+
+	// --- TOTAL PAGES ---
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	// --- QUERY PARAMS ---
+	queryPrefix := "?"
+	if name != "" {
+		queryPrefix = "?name=" + url.QueryEscape(name)
+	}
+
+	baseURL := "/product"
+	// --- PREV ---
+	if page > 1 {
+		p := page - 1
+		sep := "&"
+		if queryPrefix == "" {
+			sep = "?"
+		}
+		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, p)
+		prevURL = &url
+	}
+
+	// --- NEXT ---
+	if page < totalPages {
+		n := page + 1
+		sep := "&"
+		if queryPrefix == "" {
+			sep = "?"
+		}
+		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, n)
+		nextURL = &url
+	}
+
 	// --- VALIDATION FOR LIST PRODUCT ---
 	if len(products) == 0 {
-		ctx.JSON(200, gin.H{
+		ctx.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"data":    []string{},
 			"message": "Not found list product",
 		})
 		return
 	}
-
-	ctx.JSON(200, models.ResponseSucces{
-		Success: true,
-		Message: "Get data successfully",
-		Result:  products,
+	ctx.JSON(200, models.PaginatedResponse[models.FavoriteProduct]{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		PrevURL:    prevURL,
+		NextURL:    nextURL,
+		Result:     products,
 	})
 }
 

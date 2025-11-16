@@ -49,7 +49,7 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 	defer cancel()
 
 	// --- GET TOTAL COUNT ---
-	total, err := models.GetCountProduct(ctxTimeout, db, name)	
+	total, err := models.GetCountProduct(ctxTimeout, db)
 	if err != nil {
 		ctx.JSON(500, gin.H{
 			"success": false,
