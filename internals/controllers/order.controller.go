@@ -49,7 +49,10 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	// --- TOTAL ORDER ---
 	total, err := models.GetCountOrder(ctxTimeout, db, orderNumber, status)
 	if err != nil {
-		ctx.JSON(500, gin.H{"success": false, "message": "Failed to get total orders"})
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get total orders",
+		})
 		return
 	}
 	order, err := models.GetListOrder(ctxTimeout, db, orderNumber, status, limit, offset)
