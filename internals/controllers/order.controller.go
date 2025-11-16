@@ -70,7 +70,7 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 
 	var prevURL, nextURL *string
 
-	baseURL := "/orders"
+	baseURL := "/admin/order"
 	q := url.Values{}
 	if orderNumber != "" {
 		q.Set("order_number", orderNumber)
