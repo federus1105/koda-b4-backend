@@ -107,3 +107,16 @@ func DeleteCategories(ctx context.Context, db *pgxpool.Pool, id int) error {
 	log.Printf("categories with id %d successfully deleted", id)
 	return nil
 }
+
+func GetCountCategories(ctx context.Context, db *pgxpool.Pool) (int64, error) {
+	var total int64
+
+	sql := `SELECT COUNT(*) FROM categories`
+
+	err := db.QueryRow(ctx, sql).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, err
+}
