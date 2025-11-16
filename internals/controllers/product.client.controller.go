@@ -40,7 +40,7 @@ func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	defer cancel()
 
 	// --- GET TOTAL COUNT ---
-	total, err := models.GetCountProduct(ctxTimeout, db)
+	total, err := models.GetCountFavoriteProduct(ctxTimeout, db)
 	if err != nil {
 		ctx.JSON(500, models.Response{
 			Success: false,
@@ -66,28 +66,17 @@ func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	totalPages := int(math.Ceil(float64(total) / float64(limit)))
 
 	// --- QUERY PARAMS ---
-	queryPrefix := "?"
 
 	baseURL := "/favorite-product"
 	// --- PREV ---
 	if page > 1 {
-		p := page - 1
-		sep := "&"
-		if queryPrefix == "" {
-			sep = "?"
-		}
-		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, p)
+		url := fmt.Sprintf("%s?page=%d", baseURL, page-1)
 		prevURL = &url
 	}
 
 	// --- NEXT ---
 	if page < totalPages {
-		n := page + 1
-		sep := "&"
-		if queryPrefix == "" {
-			sep = "?"
-		}
-		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, n)
+		url := fmt.Sprintf("%s?page=%d", baseURL, page+1)
 		nextURL = &url
 	}
 
@@ -166,7 +155,7 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 	defer cancel()
 
 	// --- GET TOTAL COUNT ---
-	total, err := models.GetCountProduct(ctxTimeout, db)
+	total, err := models.GetCountProduct(ctxTimeout, db, "")
 	if err != nil {
 		ctx.JSON(500, models.Response{
 			Success: false,

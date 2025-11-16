@@ -248,3 +248,21 @@ func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (Produ
 
 	return product, nil
 }
+
+func GetCountFavoriteProduct(ctx context.Context, db *pgxpool.Pool) (int64, error) {
+	var total int64
+
+	query := `
+        SELECT COUNT(*)
+        FROM product p
+        WHERE p.is_favorite = true
+        AND p.is_deleted = false
+    `
+
+	err := db.QueryRow(ctx, query).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
