@@ -12,9 +12,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// @title Admin Pages
+// @title Coffeeshop Senja Kopi Kiri
 // @version 1.0
-// @description This is a Documentation API for Admin Pages
+// @description This is a Documentation API for Coffeshop Senja Kopi Kiri
 // @host localhost:8011
 // @BasePath /
 

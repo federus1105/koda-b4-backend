@@ -32,7 +32,7 @@ type Items struct {
 
 type DetailHistories struct {
 	Id          int     `json:"id"`
-	OrderNumber string     `json:"order_number"`
+	OrderNumber string  `json:"order_number"`
 	Fullname    string  `json:"fullname"`
 	Phone       string  `json:"phone"`
 	Email       string  `json:"email"`
@@ -154,4 +154,39 @@ func DetailHistory(ctx context.Context, db *pgxpool.Pool, idUser, idHistory int)
 	}
 
 	return history, nil
+}
+
+func GetCountHistory(ctx context.Context, db *pgxpool.Pool, IdUser int, month, status int) (int64, error) {
+	var total int64
+
+	sql := `SELECT COUNT(DISTINCT o.id)
+            FROM orders o
+            JOIN product_orders po ON po.id_order = o.id
+            JOIN product p ON p.id = po.id_product
+            JOIN status s ON s.id = o.id_status
+            WHERE o.id_account = $1`
+	args := []interface{}{IdUser}
+	argIdx := 2
+
+	// --- FILTER BY MONTH ---
+	if month != 0 {
+		sql += fmt.Sprintf(" AND EXTRACT(MONTH FROM o.createdat) = $%d", argIdx)
+		args = append(args, month)
+		argIdx++
+	}
+
+	// --- FILTER BY STATUS ---
+	if status != 0 {
+		sql += fmt.Sprintf(" AND o.id_status = $%d", argIdx)
+		args = append(args, status)
+		argIdx++
+	}
+
+	// --- EXECUTE QUERY ---
+	err := db.QueryRow(ctx, sql, args...).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }

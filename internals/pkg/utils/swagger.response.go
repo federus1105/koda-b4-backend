@@ -12,7 +12,15 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
-
 type CategoriesRequest struct {
 	Name string `json:"name"`
+}
+
+type RequestTransactions struct {
+	Phone            string `json:"phone" example:"081234567890"`
+	Email            string `json:"email" example:"youremail@gmail.com"`
+	Address          string `json:"address" example:"jakarta"`
+	Fullname         string `json:"fullname" example:"fullname"`
+	Id_PaymentMethod int    `json:"id_paymentMethod"`
+	Id_Delivery      int    `json:"id_delivery"`
 }

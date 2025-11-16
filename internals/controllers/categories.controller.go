@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -40,6 +42,17 @@ func GetListCategories(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// --- GET TOTAL CATEGORIES ---
+	total, err := models.GetCountCategories(ctxTimeout, db)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get total categories count",
+		})
+		return
+	}
+
 	categories, err := models.GetListCategories(ctxTimeout, db, name, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
@@ -50,20 +63,44 @@ func GetListCategories(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
-	// --- VALIDATION FOR LIST CATEGORIES ---
+	var prevURL *string
+	var nextURL *string
+
+	// --- TOTAL PAGES ---
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	// --- QUERY PARAMS ---
+
+	baseURL := "/admin/categories"
+	// --- PREV ---
+	if page > 1 {
+		url := fmt.Sprintf("%s?page=%d", baseURL, page-1)
+		prevURL = &url
+	}
+
+	// --- NEXT ---
+	if page < totalPages {
+		url := fmt.Sprintf("%s?page=%d", baseURL, page+1)
+		nextURL = &url
+	}
+
+	// --- VALIDATION FOR LIST PRODUCT ---
 	if len(categories) == 0 {
-		ctx.JSON(200, models.ResponseSucces{
-			Success: true,
-			Message: "Not found list categories",
-			Result:  []string{},
+		ctx.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    []string{},
+			"message": "Not found favorite product",
 		})
 		return
 	}
-
-	ctx.JSON(200, models.ResponseSucces{
-		Success: true,
-		Message: "Get data succesfully",
-		Result:  categories,
+	ctx.JSON(200, models.PaginatedResponse[models.Categories]{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		PrevURL:    prevURL,
+		NextURL:    nextURL,
+		Result:     categories,
 	})
 }
 

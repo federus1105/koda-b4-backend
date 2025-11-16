@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -38,13 +40,24 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 		page = 1
 	}
 
-	limit := 30
+	limit := 10
 	offset := (page - 1) * limit
 	name := ctx.Query("name")
 
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// --- GET TOTAL COUNT ---
+	total, err := models.GetCountProduct(ctxTimeout, db, name)
+	if err != nil {
+		ctx.JSON(500, gin.H{
+			"success": false,
+			"message": "Failed to get total product count",
+		})
+		return
+	}
+
 	products, err := models.GetListProduct(ctxTimeout, db, rd, name, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
@@ -53,6 +66,41 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 		})
 		fmt.Println("Error : ", err.Error())
 		return
+	}
+
+	var prevURL *string
+	var nextURL *string
+
+	// --- TOTAL PAGES ---
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	// --- QUERY PARAMS ---
+	queryPrefix := "?"
+	if name != "" {
+		queryPrefix = "?name=" + url.QueryEscape(name)
+	}
+
+	baseURL := "/admin/product"
+	// --- PREV ---
+	if page > 1 {
+		p := page - 1
+		sep := "&"
+		if queryPrefix == "" {
+			sep = "?"
+		}
+		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, p)
+		prevURL = &url
+	}
+
+	// --- NEXT ---
+	if page < totalPages {
+		n := page + 1
+		sep := "&"
+		if queryPrefix == "" {
+			sep = "?"
+		}
+		url := fmt.Sprintf("%s%s%spage=%d", baseURL, queryPrefix, sep, n)
+		nextURL = &url
 	}
 
 	// --- VALIDATION FOR LIST PRODUCT ---
@@ -64,12 +112,16 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 		})
 		return
 	}
-
-	ctx.JSON(200, models.ResponseSucces{
-		Success: true,
-		Message: "Get data succesfully",
-		Result:  products,
+	ctx.JSON(200, models.PaginatedResponse[models.Product]{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		PrevURL:    prevURL,
+		NextURL:    nextURL,
+		Result:     products,
 	})
+
 }
 
 // CreateProduct godoc

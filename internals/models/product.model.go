@@ -75,7 +75,13 @@ type ProductResponse struct {
 }
 
 func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, name string, limit, offset int) ([]Product, error) {
-	redisKey := "list-product"
+	// --- REDIS KEY ---
+	redisKey := fmt.Sprintf(
+		"list-product:name=%s:limit=%d:offset=%d",
+		strings.ToLower(name),
+		limit,
+		offset,
+	)
 
 	// --- GET CACHE ---
 	if cached, err := libs.GetFromCache[[]Product](ctx, rd, redisKey); err != nil {
@@ -166,11 +172,10 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 	}
 
 	// --- SAVING TO CACHE ---
-	if offset == 0 {
-		if err := libs.SetToCache(ctx, rd, redisKey, products, 1*time.Minute); err != nil {
-			log.Println("Redis Error:", err)
-		}
+	if err := libs.SetToCache(ctx, rd, redisKey, products, 5*time.Minute); err != nil {
+		log.Println("Redis Error:", err)
 	}
+
 	return products, nil
 }
 
@@ -499,4 +504,24 @@ func DeleteProduct(ctx context.Context, db *pgxpool.Pool, id int) error {
 
 	log.Printf("product with id %d successfully deleted", id)
 	return nil
+}
+
+func GetCountProduct(ctx context.Context, db *pgxpool.Pool, name string) (int64, error) {
+	var total int64
+
+	query := "SELECT COUNT(*) FROM product WHERE is_deleted = false"
+	args := []interface{}{}
+
+	if name != "" {
+		query += " AND name ILIKE $1"
+		args = append(args, "%"+name+"%")
+	}
+
+	// --- EXECUTE QUERY ---
+	err := db.QueryRow(ctx, query, args...).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }

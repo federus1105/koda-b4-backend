@@ -316,3 +316,25 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 
 	return result, nil
 }
+
+func DeleteCart(ctx context.Context, db *pgxpool.Pool, UserId, IdCart int) error {
+	sql := `DELETE FROM cart WHERE account_id = $1 AND id = $2`
+
+	result, err := db.Exec(ctx, sql, UserId, IdCart)
+	if err != nil {
+		log.Printf("Failed to execute delete, Error: %v", err)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			log.Printf("context error: %v", ctxErr)
+		}
+		return err
+	}
+	rows := result.RowsAffected()
+	log.Printf("Rows affected: %d", rows)
+
+	if rows == 0 {
+		return fmt.Errorf("cart with id %d not found", IdCart)
+	}
+
+	log.Printf("cart with id %d successfully deleted", IdCart)
+	return nil
+}

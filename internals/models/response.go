@@ -10,3 +10,13 @@ type ResponseSucces struct {
 	Message string
 	Result  any
 }
+
+type PaginatedResponse[T any] struct {
+	Page       int     `json:"page"`
+	Limit      int     `json:"limit"`
+	Total      int64   `json:"total"`
+	TotalPages int     `json:"totalPages"`
+	PrevURL    *string `json:"prevUrl"`
+	NextURL    *string `json:"nextUrl"`
+	Result     []T     `json:"data"`
+}

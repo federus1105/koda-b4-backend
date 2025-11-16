@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -43,6 +45,16 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// --- TOTAL ORDER ---
+	total, err := models.GetCountOrder(ctxTimeout, db, orderNumber, status)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get total orders",
+		})
+		return
+	}
 	order, err := models.GetListOrder(ctxTimeout, db, orderNumber, status, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
@@ -51,6 +63,34 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 		})
 		fmt.Println("Error : ", err.Error())
 		return
+	}
+
+	// --- TOTAL ---
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	var prevURL, nextURL *string
+
+	baseURL := "/admin/order"
+	q := url.Values{}
+	if orderNumber != "" {
+		q.Set("order_number", orderNumber)
+	}
+	if status != 0 {
+		q.Set("status", strconv.Itoa(status))
+	}
+
+	// --- PREV ---
+	if page > 1 {
+		p := page - 1
+		u := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), p)
+		prevURL = &u
+	}
+
+	// --- NEXT ---
+	if page < totalPages {
+		n := page + 1
+		u := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), n)
+		nextURL = &u
 	}
 
 	// --- VALIDATION FOR LIST ORDER ---
@@ -63,10 +103,14 @@ func GetListOrder(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
-	ctx.JSON(200, models.ResponseSucces{
-		Success: true,
-		Message: "Get data succesfully",
-		Result:  order,
+	ctx.JSON(200, models.PaginatedResponse[models.OrderList]{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		PrevURL:    prevURL,
+		NextURL:    nextURL,
+		Result:     order,
 	})
 }
 

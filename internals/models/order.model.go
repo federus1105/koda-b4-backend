@@ -193,3 +193,46 @@ func UpdateOrderStatus(ctx context.Context, db *pgxpool.Pool, orderID, status in
 	_, err := db.Exec(ctx, sql, status, orderID)
 	return err
 }
+
+func GetCountOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber string, status int) (int64, error) {
+	sql := `SELECT COUNT(DISTINCT o.id)
+	FROM orders o
+	JOIN product_orders po ON po.id_order = o.id
+	JOIN product p ON p.id = po.id_product
+	JOIN status s ON s.id = o.id_status
+	`
+
+	whereClauses := []string{}
+	args := []interface{}{}
+	argIdx := 1
+
+	// --- Filter OrderNumber ---
+	if strings.TrimSpace(OrderNumber) != "" {
+		if id, err := strconv.Atoi(OrderNumber); err == nil {
+			formatted := fmt.Sprintf("#ORD-%03d", id)
+			whereClauses = append(whereClauses, fmt.Sprintf("o.order_number = $%d", argIdx))
+			args = append(args, formatted)
+			argIdx++
+		}
+	}
+
+	// --- Filter Status ---
+	if status != 0 {
+		whereClauses = append(whereClauses, fmt.Sprintf("o.id_status = $%d", argIdx))
+		args = append(args, status)
+		argIdx++
+	}
+
+	// --- Append WHERE clause ---
+	if len(whereClauses) > 0 {
+		sql += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	var total int64
+	err := db.QueryRow(ctx, sql, args...).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}

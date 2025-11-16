@@ -21,4 +21,8 @@ func InitOrderClientRoutes(router *gin.Engine, db *pgxpool.Pool) {
 	InitOrderClientRoutes.POST("/transactions", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
 		controllers.Transactions(ctx, db)
 	})
+
+	InitOrderClientRoutes.DELETE("/cart/:id", middlewares.VerifyToken, middlewares.AuthMiddleware(), func(ctx *gin.Context) {
+		controllers.DeleteCart(ctx, db)
+	})
 }

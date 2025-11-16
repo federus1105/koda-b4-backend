@@ -33,6 +33,7 @@ type UserBody struct {
 type UserUpdateBody struct {
 	Id        int                   `form:"id"`
 	Fullname  *string               `form:"fullname" binding:"omitempty,max=30"`
+	Email     *string               `form:"email" binding:"email"`
 	Phone     *string               `form:"phone" binding:"omitempty,max=12"`
 	Address   *string               `form:"address" binding:"omitempty,max=50"`
 	Photos    *multipart.FileHeader `form:"photos"`
@@ -185,6 +186,16 @@ func EditUser(ctx context.Context, db *pgxpool.Pool, body UserUpdateBody, id int
 		}
 	}
 
+	// --- UPDATE EMAIL DI USERS TABLE ---
+	if body.Email != nil {
+		queryEmail := `UPDATE users SET email=$1 WHERE id=$2`
+		_, err := tx.Exec(ctx, queryEmail, *body.Email, id)
+		if err != nil {
+			log.Println("Failed to update email:", err)
+			return UserBody{}, err
+		}
+	}
+
 	// --- GET UPDATED DATA ---
 	var updated UserBody
 	querySelect := `
@@ -220,4 +231,32 @@ func EditUser(ctx context.Context, db *pgxpool.Pool, body UserUpdateBody, id int
 	}
 
 	return updated, nil
+}
+
+func GetCountUser(ctx context.Context, db *pgxpool.Pool, name string) (int64, error) {
+	sql := `SELECT COUNT(*) FROM account a
+	JOIN users u ON u.id = a.id_users`
+
+	args := []interface{}{}
+	argIdx := 1
+	whereClauses := []string{}
+
+	// --- Filter by name ---
+	if strings.TrimSpace(name) != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("a.fullname ILIKE $%d", argIdx))
+		args = append(args, "%"+name+"%")
+		argIdx++
+	}
+
+	if len(whereClauses) > 0 {
+		sql += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	var total int64
+	err := db.QueryRow(ctx, sql, args...).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
 }

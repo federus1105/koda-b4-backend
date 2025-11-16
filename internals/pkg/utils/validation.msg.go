@@ -1,6 +1,10 @@
 package utils
 
-import "github.com/go-playground/validator/v10"
+import (
+	"errors"
+
+	"github.com/go-playground/validator/v10"
+)
 
 func ErrorMessage(fe validator.FieldError) string {
 	field := fe.Field()
@@ -42,10 +46,6 @@ func ErrorMessage(fe validator.FieldError) string {
 		if tag == "email" {
 			return "invalid email format"
 		}
-	case "Password":
-		if tag == "password_complex" {
-			return field + " must contain uppercase, lowercase, number, and special character"
-		}
 	case "Username":
 		if tag == "max" {
 			return field + " must be at most " + fe.Param() + " characters"
@@ -69,6 +69,8 @@ func ErrorMessage(fe validator.FieldError) string {
 
 	// --- Default messages ---
 	switch tag {
+	case "password_complex":
+		return "password must contain uppercase, lowercase, number, and special character"
 	case "required":
 		return field + " is required"
 	case "gt":
@@ -83,7 +85,12 @@ func ErrorMessage(fe validator.FieldError) string {
 		return field + " must have at least " + fe.Param() + " item(s)"
 	case "max":
 		return field + " can have at most " + fe.Param() + " item(s)"
+	case "eqfield":
+		return field + " must match " + fe.Param()
 	default:
 		return field + " is invalid"
 	}
 }
+
+// --- ERROR MESSAGE UPDATE PASSWORD ---
+var ErrValidation = errors.New("validation error")
