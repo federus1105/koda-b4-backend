@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
+	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -74,6 +77,16 @@ func GetHistory(ctx *gin.Context, db *pgxpool.Pool) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// --- GET TOTAL HISTORY ---
+	total, err := models.GetCountHistory(ctxTimeout, db, userID, month, status)
+	if err != nil {
+		ctx.JSON(500, models.Response{
+			Success: false,
+			Message: "Failed to get total history count",
+		})
+		return
+	}
+
 	histories, err := models.GetHistory(ctxTimeout, db, userID, month, status, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
@@ -84,20 +97,54 @@ func GetHistory(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
-	// --- VALIDATION FOR LIST HISTORIES ---
+	var prevURL *string
+	var nextURL *string
+
+	// --- TOTAL PAGES ---
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	// --- BUILD QUERY PARAMS FOR URL ---
+	q := url.Values{}
+	if month > 0 {
+		q.Add("month", strconv.Itoa(month))
+	}
+	if status > 0 {
+		q.Add("status", strconv.Itoa(status))
+	}
+
+	baseURL := "/history"
+
+	// --- PREV URL ---
+	if page > 1 {
+		p := page - 1
+		url := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), p)
+		prevURL = &url
+	}
+
+	// --- NEXT URL ---
+	if page < totalPages {
+		n := page + 1
+		url := fmt.Sprintf("%s?%s&page=%d", baseURL, q.Encode(), n)
+		nextURL = &url
+	}
+
+	// --- VALIDATION FOR LIST PRODUCT ---
 	if len(histories) == 0 {
-		ctx.JSON(200, gin.H{
+		ctx.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"data":    []string{},
-			"message": "Not found list History",
+			"message": "Not found list history",
 		})
 		return
 	}
-
-	ctx.JSON(200, models.ResponseSucces{
-		Success: true,
-		Message: "Get data successfully",
-		Result:  histories,
+	ctx.JSON(200, models.PaginatedResponse[models.History]{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+		PrevURL:    prevURL,
+		NextURL:    nextURL,
+		Result:     histories,
 	})
 }
 
