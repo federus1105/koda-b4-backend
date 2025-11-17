@@ -12,18 +12,18 @@ import (
 )
 
 type CartItemRequest struct {
-	ProductID int `json:"product_id" binding:"gt=0"`
-	SizeID    int `json:"size" binding:"gt=0,lte=3"`
-	VariantID int `json:"variant" binding:"gt=0,lte=2"`
-	Quantity  int `json:"quantity" binding:"gt=0"`
+	ProductID int  `json:"product_id" binding:"gt=0"`
+	SizeID    *int `json:"size" binding:"omitempty,gt=0,lte=3"`
+	VariantID *int `json:"variant" binding:"omitempty,gt=0,lte=2"`
+	Quantity  int  `json:"quantity" binding:"gt=0"`
 }
 
 type CartItemResponse struct {
 	ID        int       `json:"id"`
 	AccountID int       `json:"account_id"`
 	ProductID int       `json:"product_id"`
-	SizeID    int       `json:"size_id"`
-	VariantID int       `json:"variant_id"`
+	SizeID    *int      `json:"size_id"`
+	VariantID *int      `json:"variant_id"`
 	Quantity  int       `json:"quantity"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -34,8 +34,8 @@ type Card struct {
 	Image         string  `json:"images"`
 	Name          string  `json:"name"`
 	Quantity      int     `json:"qty"`
-	Size          string  `json:"size"`
-	Variant       string  `json:"variant"`
+	Size          *string `json:"size"`
+	Variant       *string `json:"variant"`
 	Price         float64 `json:"price"`
 	PriceDiscount float64 `json:"discount"`
 	FlashSale     bool    `json:"flash_sale"`
@@ -130,10 +130,10 @@ func GetCartProduct(ctx context.Context, db *pgxpool.Pool, UserID int) ([]Card, 
     v.name AS variant,
     (p.priceoriginal * c.quantity) AS subtotal
 FROM cart c
-JOIN sizes s ON s.id = c.size_id
-JOIN variants v ON v.id = c.variant_id
-JOIN product p ON p.id = c.product_id
-JOIN product_images pi ON p.id_product_images = pi.id
+LEFT JOIN sizes s ON s.id = c.size_id
+LEFT JOIN variants v ON v.id = c.variant_id
+LEFT JOIN product p ON p.id = c.product_id
+LEFT JOIN product_images pi ON p.id_product_images = pi.id
 WHERE c.account_id = $1;`
 
 	rows, err := db.Query(ctx, sql, UserID)
