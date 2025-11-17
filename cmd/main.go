@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/federus1105/koda-b4-backend/internals/configs"
 	"github.com/federus1105/koda-b4-backend/internals/routes"
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,18 @@ func main() {
 	}
 	log.Println("✅ REDIS Connected: ", Rdb)
 
-	routes.InitRouter(router, db, rdb)
+	// --- INIT CLAUDINARY ---
+	cld, err := cloudinary.NewFromURL(os.Getenv("CLOUDINARY_URL"))
+	if err != nil {
+		log.Println("Failed Connected cloudinary : ", err)
+	}
+
+	if cld != nil {
+		log.Println("✅ Cloudinary connected")
+	} else {
+		log.Println("⚠ Cloudinary not initialized")
+	}
+
+	routes.InitRouter(router, db, rdb, cld)
 	router.Run("localhost:8011")
 }

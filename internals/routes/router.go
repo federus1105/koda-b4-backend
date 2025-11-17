@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/federus1105/koda-b4-backend/internals/models"
 	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func InitRouter(app *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
+func InitRouter(app *gin.Engine, db *pgxpool.Pool, rd *redis.Client, cld *cloudinary.Cloudinary) {
 	utils.InitValidator()
 
 	// --- SWAGGER ---
@@ -23,7 +24,7 @@ func InitRouter(app *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 
 	// --- ROUTE ---
 	InitAuthRouter(app, db, rd)
-	InitProductRouter(app, db, rd)
+	InitProductRouter(app, db, rd, cld)
 	InitOrderRouter(app, db)
 	InitUserRoute(app, db)
 	InitCategoriesRouter(app, db)

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/federus1105/koda-b4-backend/internals/controllers"
 	"github.com/federus1105/koda-b4-backend/internals/middlewares"
 	"github.com/gin-gonic/gin"
@@ -8,7 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
+func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client, cld *cloudinary.Cloudinary) {
 	productRouter := router.Group("/admin/product")
 	productRouterother := router.Group("/")
 	productRouterFilter := router.Group("/product")
@@ -18,7 +19,7 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client) {
 	})
 
 	productRouter.POST("", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
-		controllers.CreateProduct(ctx, db, rd)
+		controllers.CreateProduct(ctx, db, rd, cld)
 	})
 
 	productRouter.PATCH("/:id", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
