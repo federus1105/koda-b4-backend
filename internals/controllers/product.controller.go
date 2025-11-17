@@ -10,16 +10,20 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/federus1105/koda-b4-backend/internals/models"
 	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -141,8 +145,9 @@ func GetListProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 // @Success 200 {object} models.ResponseSucces
 // @Router /admin/product [post]
 // @Security BearerAuth
-func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
+func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client, cld *cloudinary.Cloudinary) {
 	var body models.CreateProducts
+	godotenv.Load()
 
 	// --- VALIDATION ---
 	if err := ctx.ShouldBind(&body); err != nil {
@@ -195,30 +200,51 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 	}
 
 	imageStrs := map[string]string{}
+	useCloudinary := os.Getenv("CLOUDINARY_URL") != ""
 
 	// --- MULTIPLE UPLOAD IMAGES ---
 	for key, file := range imageFiles {
 		if file == nil {
 			continue
 		}
-		savePath, generatedFilename, err := utils.UploadImageFile(ctx, file, "public", fmt.Sprintf("%s_%d", key, user.ID))
-		if err != nil {
-			ctx.JSON(400, models.Response{
-				Success: false,
-				Message: err.Error(),
-			})
-			return
-		}
+		if !useCloudinary {
 
-		if err := ctx.SaveUploadedFile(file, savePath); err != nil {
-			ctx.JSON(500, models.Response{
-				Success: false,
-				Message: fmt.Sprintf("Failed to save %s", key),
-			})
-			return
-		}
+			savePath, generatedFilename, err := utils.UploadImageFile(ctx, file, "public", fmt.Sprintf("%s_%d", key, user.ID))
+			if err != nil {
+				ctx.JSON(400, models.Response{
+					Success: false,
+					Message: err.Error(),
+				})
+				return
+			}
 
-		imageStrs[key] = generatedFilename
+			if err := ctx.SaveUploadedFile(file, savePath); err != nil {
+				ctx.JSON(500, models.Response{
+					Success: false,
+					Message: fmt.Sprintf("Failed to save %s", key),
+				})
+				return
+			}
+
+			imageStrs[key] = generatedFilename
+		} else {
+			// --- UPLOAD CLOUDINARY ---
+			overwrite := true
+			uploadResp, err := cld.Upload.Upload(ctx, file, uploader.UploadParams{
+				Folder:    "assets/product",
+				PublicID:  fmt.Sprintf("%s_%d", key, user.ID),
+				Overwrite: &overwrite,
+			})
+
+			if err != nil {
+				ctx.JSON(500, gin.H{
+					"success": false,
+					"message": fmt.Sprintf("Failed to upload %s to cloudinary", key),
+				})
+				return
+			}
+			imageStrs[key] = uploadResp.SecureURL
+		}
 	}
 
 	// --- ASSIGN TO BODY ---
