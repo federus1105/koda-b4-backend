@@ -40,6 +40,7 @@ type CreateProducts struct {
 	Stock          int                   `form:"stock" binding:"gte=0"`
 	Size           []int                 `form:"size,omitempty" binding:"max=3,dive,gt=0,lte=3"`
 	Variant        []int                 `form:"variant,omitempty" binding:"max=2,dive,gt=0,lte=2"`
+	Category       []int                 `form:"category" binding:"required"`
 }
 
 type UpdateProducts struct {
@@ -59,6 +60,7 @@ type UpdateProducts struct {
 	Stock          *int                  `form:"stock" binding:"omitempty,gte=0"`
 	Size           []int                 `form:"size,omitempty" binding:"max=3,dive,gt=0,lte=3"`
 	Variant        []int                 `form:"variant,omitempty" binding:"max=2,dive,gt=0,lte=2"`
+	Category       []int                 `form:"category,omitempty"`
 }
 
 type ProductResponse struct {
@@ -72,6 +74,7 @@ type ProductResponse struct {
 	Stock       int               `json:"stock"`
 	Size        []int             `json:"size,omitempty"`
 	Variant     []int             `json:"variant,omitempty"`
+	Category    []int             `json:"category"`
 }
 
 func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, name string, limit, offset int) ([]Product, error) {
@@ -248,6 +251,18 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body
 		}
 	}
 
+	// --- INSERT TO CATEGORY PRODUCT ---
+	if len(body.Category) > 0 {
+		CategorySQL := `INSERT INTO product_categories (id_product, id_categories) VALUES ($1, $2)`
+		for _, CategoryID := range body.Category {
+			_, err := tx.Exec(ctx, CategorySQL, newProduct.Id, CategoryID)
+			if err != nil {
+				log.Println("Failed to insert product categories", err)
+				return CreateProducts{}, err
+			}
+		}
+	}
+
 	// --- ASIGN IMAGE STR TO RETURN STRUCT RESPONSE---
 	newProduct.Image_oneStr = body.Image_oneStr
 	newProduct.Image_twoStr = body.Image_twoStr
@@ -255,6 +270,7 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body
 	newProduct.Image_fourStr = body.Image_fourStr
 	newProduct.Size = body.Size
 	newProduct.Variant = body.Variant
+	newProduct.Category = body.Category
 
 	// --- COMMIT TRANSACTION ---
 	if err := tx.Commit(ctx); err != nil {
@@ -357,7 +373,6 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 			return CreateProducts{}, err
 		}
 
-		// Insert size baru
 		for _, sizeID := range body.Size {
 			if sizeID > 0 && sizeID <= 3 {
 				_, err := tx.Exec(ctx, "INSERT INTO size_product (id_product, id_size) VALUES ($1, $2)", body.Id, sizeID)
@@ -383,6 +398,22 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 				if err != nil {
 					return CreateProducts{}, err
 				}
+			}
+		}
+	}
+
+	// --- HANDLE CATEGORY ---
+	if len(body.Category) > 0 {
+		_, err := tx.Exec(ctx, "DELETE FROM product_categories WHERE id_product=$1", body.Id)
+		if err != nil {
+			return CreateProducts{}, err
+		}
+	}
+	for _, categoryID := range body.Category {
+		if categoryID > 0 {
+			_, err := tx.Exec(ctx, "INSERT INTO product_categories (id_product, id_categories) VALUES ($1, $2)", body.Id, categoryID)
+			if err != nil {
+				return CreateProducts{}, err
 			}
 		}
 	}
@@ -456,6 +487,26 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 		variantIDs = append(variantIDs, variantID)
 	}
 	product.Variant = variantIDs
+
+	// --- GET CATEGORY LIST ---
+	rowsCategory, err := tx.Query(ctx, `
+	SELECT id_categories
+	FROM product_categories
+	WHERE id_product = $1
+`, body.Id)
+	if err != nil {
+		return CreateProducts{}, err
+	}
+	defer rowsCategory.Close()
+	var categoryIDs []int
+	for rowsCategory.Next() {
+		var categoryID int
+		if err := rowsCategory.Scan(&categoryID); err != nil {
+			return CreateProducts{}, err
+		}
+		categoryIDs = append(categoryIDs, categoryID)
+	}
+	product.Category = categoryIDs
 
 	// --- ASIGN IMAGE STR TO RETURN STRUCT RESPONSE---
 	if body.Image_oneStr != nil {
