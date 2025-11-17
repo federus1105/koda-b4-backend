@@ -267,6 +267,7 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 		Stock:       product.Stock,
 		Size:        product.Size,
 		Variant:     product.Variant,
+		Category:    product.Category,
 	}
 
 	ctx.JSON(200, models.ResponseSucces{
@@ -426,6 +427,7 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		"images":      map[string]string{},
 		"size":        product.Size,
 		"variant":     product.Variant,
+		"category":    product.Category,
 	}
 
 	images := map[string]string{}
