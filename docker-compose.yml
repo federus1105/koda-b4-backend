@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8006:8011"
+    depends_on:
+    - db
+    - redis
+
+  db: 
+    image: postgres:16-alpine
+    environment:
+    - POSTGRES_USER=${DBUSER}
+    - POSTGRES_PASSWORD=${DBPASS}
+    - POSTGRES_DB=${DBNAME}
+    ports:
+      - 5432:5432
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDISPASS}"]
+    ports:
+      -  6380:6379
+    environment:
+      - REDISPASS=${REDISPASS}
