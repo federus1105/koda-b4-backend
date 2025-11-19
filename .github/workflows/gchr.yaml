@@ -56,6 +56,4 @@ jobs:
             docker rm senja-kopi-kiri || true
 
             echo "Running new container..."
-            docker run -d --name senja-kopi-kiri \
-              -p 80:80 \
-              ghcr.io/federus1105/koda-b4-backend:latest
+            docker run -d --name senja-kopi-kiri -p 8006:8011 ghcr.io/federus1105/koda-b4-backend:latest
