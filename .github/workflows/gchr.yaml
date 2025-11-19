@@ -1,8 +1,8 @@
 name: Build images Backend Senja Kopi-Kiri
 on:
   push:
-    branches:
-      - master
+     tags:
+      - '*'
 
 jobs:
   build-and-publish:
