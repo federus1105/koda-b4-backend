@@ -68,9 +68,9 @@ func main() {
 		log.Println("⚠ Cloudinary not initialized")
 	}
 
-	router.Group("/")
+	root := router.Group("/")
 
-	router.GET("/", func(ctx *gin.Context) {
+	root.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, models.ResponseSucces{
 			Success: true,
 			Message: "Backend is running boy",
