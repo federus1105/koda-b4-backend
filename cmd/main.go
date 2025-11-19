@@ -40,7 +40,7 @@ func main() {
 	}
 
 	defer db.Close()
-	log.Println("✅ DB Connected")
+	log.Println("✅ DB Connected boy")
 
 	// --- INIT RDB ---
 	rdb, Rdb, err := configs.InitRedis()
@@ -53,7 +53,7 @@ func main() {
 		fmt.Println("Failed Connected Redis : ", err.Error())
 		return
 	}
-	log.Println("✅ REDIS Connected: ", Rdb)
+	log.Println("✅ REDIS Connected boy: ", Rdb)
 
 	// --- INIT CLAUDINARY ---
 	cld, err := cloudinary.NewFromURL(os.Getenv("CLOUDINARY_URL"))

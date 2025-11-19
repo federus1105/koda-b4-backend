@@ -46,4 +46,4 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ~/server && docker compose pull && docker compose up backend -d
-            docker sytem prune -a --volumes
+            docker system prune -a --volumes
