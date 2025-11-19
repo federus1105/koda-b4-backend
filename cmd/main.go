@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/federus1105/koda-b4-backend/internals/configs"
+	"github.com/federus1105/koda-b4-backend/internals/models"
 	"github.com/federus1105/koda-b4-backend/internals/routes"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -66,6 +67,15 @@ func main() {
 	} else {
 		log.Println("⚠ Cloudinary not initialized")
 	}
+
+	router.Group("/")
+
+	router.GET("/", func(ctx *gin.Context) {
+		ctx.JSON(200, models.ResponseSucces{
+			Success: true,
+			Message: "Backend is running boy",
+		})
+	})
 
 	routes.InitRouter(router, db, rdb, cld)
 	router.Run(":8011")
