@@ -45,5 +45,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ghcr.io/federus1105/koda-b4-backend:latest
+            cd ~/server && docker compose pull && docker compose up backend -d
+            docker sytem prune -a --volumes
