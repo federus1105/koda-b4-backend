@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/federus1105/koda-b4-backend/internals/configs"
+	"github.com/federus1105/koda-b4-backend/internals/middlewares"
 	"github.com/federus1105/koda-b4-backend/internals/models"
 	"github.com/federus1105/koda-b4-backend/internals/routes"
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ import (
 func main() {
 	router := gin.Default()
 	router.Use(gin.Recovery())
+	router.Use(middlewares.CORSMiddleware)
 
 	// --- LOAD .ENV IF DEVELOPMENT ---
 	if os.Getenv("ENV") != "production" {
@@ -68,9 +70,7 @@ func main() {
 		log.Println("⚠ Cloudinary not initialized")
 	}
 
-	root := router.Group("/")
-
-	root.GET("/", func(ctx *gin.Context) {
+	router.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, models.ResponseSucces{
 			Success: true,
 			Message: "Backend is running boy",
