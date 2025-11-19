@@ -28,7 +28,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+          tags:  ghcr.io/federus1105/koda-b4-backend:latest
 
       - name: Set IMAGE_NAME environment variable
         run: echo "IMAGE_NAME=$(echo '${{ env.IMAGE_NAME }}')" >> $GITHUB_ENV
