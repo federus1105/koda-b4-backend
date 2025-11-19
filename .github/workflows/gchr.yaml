@@ -45,5 +45,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd ~/server && docker compose pull && docker compose up backend -d
+            cd /home/ubuntu/server && \
+            docker compose pull && \
+            docker compose up backend -d && \
             docker system prune -a --volumes
