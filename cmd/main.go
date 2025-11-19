@@ -68,5 +68,5 @@ func main() {
 	}
 
 	routes.InitRouter(router, db, rdb, cld)
-	router.Run("localhost:8011")
+	router.Run(":8011")
 }
