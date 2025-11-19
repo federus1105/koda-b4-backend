@@ -29,3 +29,30 @@ jobs:
 
       - name: Set IMAGE_NAME environment variable
         run: echo "IMAGE_NAME=$(echo '${{ env.IMAGE_NAME }}')" >> $GITHUB_ENV
+
+  deploy:
+    needs: build-and-publish 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull and run image on remote server
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            echo "Logging in to GitHub Container Registry..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "Pulling Docker image..."
+            docker pull ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+
+            echo "Stopping old container..."
+            docker stop senja-kopi-kiri || true
+            docker rm senja-kopi-kiri || true
+
+            echo "Running new container..."
+            docker run -d --name senja-kopi-kiri \
+              -p 80:80 \
+              ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
