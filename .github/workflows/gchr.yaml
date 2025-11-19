@@ -47,4 +47,3 @@ jobs:
           script: |
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/federus1105/koda-b4-backend:latest
-            docker run -d --name senja-kopi-kiri -p 8006:8011 ghcr.io/federus1105/koda-b4-backend:latest
