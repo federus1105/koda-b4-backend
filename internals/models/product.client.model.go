@@ -133,7 +133,7 @@ WHERE p.is_deleted = false
 	}
 
 	// --- SORT ---
-	if sortBy != "	" {
+	if sortBy != "priceOriginal" {
 		sortBy = "name"
 	}
 	sql += fmt.Sprintf(" ORDER BY p.%s ASC", sortBy)
