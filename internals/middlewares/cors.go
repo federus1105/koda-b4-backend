@@ -8,10 +8,22 @@ import (
 )
 
 func CORSMiddleware(ctx *gin.Context) {
-	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+	allowedOrigins := []string{
+		os.Getenv("ALLOWED_ORIGIN"),
+		os.Getenv("ALLOWED_ORIGIN_2"),
+	}
+
 	origin := ctx.GetHeader("Origin")
 
-	if origin == allowedOrigin {
+	allowed := false
+	for _, o := range allowedOrigins {
+		if origin == o {
+			allowed = true
+			break
+		}
+	}
+
+	if allowed {
 		ctx.Header("Access-Control-Allow-Origin", origin)
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 	}
