@@ -1,40 +1,27 @@
 package middlewares
 
 import (
-	"net/http"
 	"os"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
-func CORSMiddleware(ctx *gin.Context) {
-	allowedOrigins := []string{
-		os.Getenv("ALLOWED_ORIGIN"),
-		os.Getenv("ALLOWED_ORIGIN_2"),
+func CORSMiddleware() gin.HandlerFunc {
+	allowedOrigins := []string{}
+	if origin := os.Getenv("ALLOWED_ORIGIN"); origin != "" {
+		allowedOrigins = append(allowedOrigins, origin)
+	}
+	if origin2 := os.Getenv("ALLOWED_ORIGIN_2"); origin2 != "" {
+		allowedOrigins = append(allowedOrigins, origin2)
 	}
 
-	origin := ctx.GetHeader("Origin")
-
-	allowed := false
-	for _, o := range allowedOrigins {
-		if origin == o {
-			allowed = true
-			break
-		}
-	}
-
-	if allowed {
-		ctx.Header("Access-Control-Allow-Origin", origin)
-		ctx.Header("Access-Control-Allow-Credentials", "true")
-	}
-
-	ctx.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
-	ctx.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
-
-	if ctx.Request.Method == http.MethodOptions {
-		ctx.AbortWithStatus(http.StatusNoContent)
-		return
-	}
-
-	ctx.Next()
+	return cors.New(cors.Config{
+		AllowOrigins:     allowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	})
 }

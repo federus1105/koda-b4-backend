@@ -28,7 +28,7 @@ import (
 func main() {
 	router := gin.Default()
 	router.Use(gin.Recovery())
-	router.Use(middlewares.CORSMiddleware)
+	router.Use(middlewares.CORSMiddleware())
 
 	// --- LOAD .ENV IF DEVELOPMENT ---
 	if os.Getenv("ENV") != "production" {
