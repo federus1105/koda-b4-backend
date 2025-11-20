@@ -32,7 +32,7 @@ func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 		page = 1
 	}
 
-	limit := 3
+	limit := 4
 	offset := (page - 1) * limit
 
 	// ---- LIMITS QUERY EXECUTION TIME ---
