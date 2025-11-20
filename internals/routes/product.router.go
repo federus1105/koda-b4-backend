@@ -34,7 +34,7 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client, c
 		controllers.GetListImageById(ctx, db)
 	})
 
-	// ============ CLIENT ROUTER =========
+	// ============ CLIENT ROUTER ===========
 
 	productRouterother.GET("favorite-product", func(ctx *gin.Context) {
 		controllers.GetListFavoriteProduct(ctx, db)
