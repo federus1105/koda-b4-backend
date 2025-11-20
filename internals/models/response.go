@@ -1,14 +1,14 @@
 package models
 
 type Response struct {
-	Success bool
-	Message string
+	Success bool `json:"success"`
+	Message string `json:"message"`
 }
 
 type ResponseSucces struct {
-	Success bool
-	Message string
-	Result  any
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Result  any    `json:"result"`
 }
 
 type PaginatedResponse[T any] struct {
