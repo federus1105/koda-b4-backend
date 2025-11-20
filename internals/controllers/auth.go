@@ -207,22 +207,19 @@ func ForgotPassword(ctx *gin.Context, db *pgxpool.Pool, rdb *redis.Client) {
 
 	// --- URL ---
 	frontendURL := os.Getenv("FRONTEND_RESET_URL")
-	if frontendURL == "" {
-		frontendURL = "localhost:8011/auth/reset-password"
-	}
 
-	resetLink := fmt.Sprintf("%s?token=%s", frontendURL, token)
+	resetLink := frontendURL
 
 	// --- MESSAGE EMAIL ---
 	emailBody := fmt.Sprintf(`
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <h2 style="color: #4CAF50;">Reset Password</h2>
+        <h2 style="color:  #8B4513;">Reset Password</h2>
         <p>Halo,</p>
         <p>Anda atau seseorang telah meminta reset password untuk akun Anda. Gunakan token berikut untuk melakukan reset password:</p>
         <p style="font-size: 20px; font-weight: bold; color: #000;">%s</p>
         <p>Atau klik tombol berikut untuk langsung ke halaman reset password:</p>
         <p>
-            <a href="%s" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: #fff; text-decoration: none; border-radius: 5px;">
+            <a href="%s" style="display: inline-block; padding: 10px 20px; background-color:  #8B4513; color: #fff; text-decoration: none; border-radius: 5px;">
                 Reset Password
             </a>
         </p>
@@ -248,7 +245,6 @@ func ForgotPassword(ctx *gin.Context, db *pgxpool.Pool, rdb *redis.Client) {
 	ctx.JSON(200, gin.H{
 		"success":    true,
 		"message":    "Reset link sent to email",
-		"reset_link": resetLink,
 	})
 }
 
