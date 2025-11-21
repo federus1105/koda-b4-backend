@@ -31,6 +31,7 @@ type CartItemResponse struct {
 
 type Card struct {
 	Id            int     `json:"id"`
+	Id_product    int     `json:"id_product"`
 	Image         string  `json:"images"`
 	Name          string  `json:"name"`
 	Quantity      int     `json:"qty"`
@@ -120,6 +121,7 @@ func CreateCartProduct(ctx context.Context, db *pgxpool.Pool, accountID int, inp
 func GetCartProduct(ctx context.Context, db *pgxpool.Pool, UserID int) ([]Card, error) {
 	sql := `SELECT 
     c.id, 
+	p.id as id_product,
     p.name, 
     p.priceoriginal,
     p.pricediscount,
@@ -147,6 +149,7 @@ WHERE c.account_id = $1;`
 		var c Card
 		if err := rows.Scan(
 			&c.Id,
+			&c.Id_product,	
 			&c.Name,
 			&c.Price,
 			&c.PriceDiscount,

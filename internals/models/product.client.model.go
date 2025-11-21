@@ -10,11 +10,13 @@ import (
 )
 
 type FavoriteProduct struct {
-	Id          int    `json:"id"`
-	Image       string `json:"image"`
-	Name        string `json:"name"`
-	Price       string `json:"price"`
-	Description string `json:"description"`
+	Id          int     `json:"id"`
+	Image       string  `json:"image"`
+	Name        string  `json:"name"`
+	Price       float32 `json:"price"`
+	Discount    float64 `json:"discount"`
+	Flash_sale  bool    `json:"flash_sale"`
+	Description string  `json:"description"`
 }
 
 type Option struct {
@@ -35,13 +37,16 @@ type ProductClient struct {
 	Stock         int      `json:"stock"`
 	Size          []Option `json:"sizes"`
 	Variant       []Option `json:"variant"`
+	Flash_sale    bool     `json:"flash_sale"`
 }
 
 func GetListFavoriteProduct(ctx context.Context, db *pgxpool.Pool, limit, offset int) ([]FavoriteProduct, error) {
 	sql := `SELECT pi.photos_one as image,
 	p.id,
 	p.name, 
+	p.flash_sale,
 	p.priceoriginal as price,
+    p.pricediscount as discount,
 	p.description
  	FROM product p
 	JOIN product_images pi ON pi.id = p.id_product_images
@@ -58,7 +63,7 @@ func GetListFavoriteProduct(ctx context.Context, db *pgxpool.Pool, limit, offset
 	var products []FavoriteProduct
 	for rows.Next() {
 		var fp FavoriteProduct
-		if err := rows.Scan(&fp.Image, &fp.Id, &fp.Name, &fp.Price, &fp.Description); err != nil {
+		if err := rows.Scan(&fp.Image, &fp.Id, &fp.Name, &fp.Flash_sale, &fp.Price, &fp.Discount, &fp.Description); err != nil {
 			return nil, err
 		}
 		products = append(products, fp)
@@ -82,7 +87,9 @@ func GetListProductFilter(ctx context.Context, db *pgxpool.Pool,
 	sql := `
 SELECT DISTINCT p.id,
        p.name,
-       p.priceoriginal AS price,
+       p.flash_sale,
+	   p.priceoriginal as price,
+       p.pricediscount as discount,
        p.description,
        pi.photos_one AS image
 FROM product p
@@ -152,7 +159,7 @@ WHERE p.is_deleted = false
 	var products []FavoriteProduct
 	for rows.Next() {
 		var p FavoriteProduct
-		if err := rows.Scan(&p.Id, &p.Name, &p.Price, &p.Description, &p.Image); err != nil {
+		if err := rows.Scan(&p.Id, &p.Name, &p.Flash_sale, &p.Price, &p.Discount, &p.Description, &p.Image); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -169,13 +176,14 @@ func GetProductById(ctx context.Context, db *pgxpool.Pool, productId int) (Produ
 	var priceDiscount *float64
 	// --- QUERY ----
 	err := db.QueryRow(ctx, `
-        SELECT p.name, p.priceoriginal, p.priceDiscount, p.rating, p.description, p.stock,
+        SELECT p.name, p.flash_sale, p.priceoriginal, p.priceDiscount, p.rating, p.description, p.stock,
                pi.photos_one, pi.photos_two, pi.photos_three, pi.photos_four
         FROM product p
         JOIN product_images pi ON p.id_product_images = pi.id
         WHERE p.id=$1
     `, productId).Scan(
 		&product.Name,
+		&product.Flash_sale,
 		&product.Price,
 		&priceDiscount,
 		&product.Rating,
