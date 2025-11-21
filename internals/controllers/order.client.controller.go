@@ -188,7 +188,7 @@ func Transactions(ctx *gin.Context, db *pgxpool.Pool) {
 	var input models.TransactionsInput
 
 	// --- VALIDATION ---
-	if err := ctx.ShouldBind(&input); err != nil {
+	if err := ctx.ShouldBindJSON(&input); err != nil {
 		var ve validator.ValidationErrors
 		if errors.As(err, &ve) {
 			var msgs []string
