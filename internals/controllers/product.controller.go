@@ -322,7 +322,7 @@ func CreateProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client, cld *cl
 // @Success 200 {object} models.ResponseSucces
 // @Router /admin/product/{id} [patch]
 // @Security BearerAuth
-func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
+func EditProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client, cld *cloudinary.Cloudinary) {
 	// --- GET PORDUCT ID ---
 	productIDstr := ctx.Param("id")
 	productID, err := strconv.Atoi(productIDstr)
@@ -387,30 +387,55 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	}
 
 	imageStrs := map[string]*string{}
+	useCloudinary := os.Getenv("CLOUDINARY_URL") != ""
 
 	// --- MULTIPLE UPLOAD IMAGES ---
 	for key, file := range imageFiles {
 		if file == nil {
 			continue
 		}
-		savePath, generatedFilename, err := utils.UploadImageFile(ctx, file, "public", fmt.Sprintf("%s_%d", key, user.ID))
-		if err != nil {
-			ctx.JSON(400, models.Response{
-				Success: false,
-				Message: err.Error(),
-			})
-			return
-		}
 
-		if err := ctx.SaveUploadedFile(file, savePath); err != nil {
-			ctx.JSON(500, models.Response{
-				Success: false,
-				Message: fmt.Sprintf("Failed to save %s", key),
-			})
-			return
-		}
+		if !useCloudinary {
+			// --- LOCAL UPLOAD ---
+			savePath, generatedFilename, err := utils.UploadImageFile(ctx, file, "public", fmt.Sprintf("%s_%d", key, user.ID))
+			if err != nil {
+				ctx.JSON(400, models.Response{
+					Success: false,
+					Message: err.Error(),
+				})
+				return
+			}
 
-		imageStrs[key] = &generatedFilename
+			if err := ctx.SaveUploadedFile(file, savePath); err != nil {
+				ctx.JSON(500, models.Response{
+					Success: false,
+					Message: fmt.Sprintf("Failed to save %s", key),
+				})
+				return
+			}
+
+			imageStrs[key] = &generatedFilename
+
+		} else {
+			// --- CLOUDINARY UPLOAD ---
+			overwrite := true
+			uploadResp, err := cld.Upload.Upload(ctx, file, uploader.UploadParams{
+				Folder:    "assets/product",
+				PublicID:  fmt.Sprintf("%s_%d", key, user.ID),
+				Overwrite: &overwrite,
+			})
+
+			if err != nil {
+				ctx.JSON(500, gin.H{
+					"success": false,
+					"message": fmt.Sprintf("Failed to upload %s to Cloudinary", key),
+				})
+				return
+			}
+
+			url := uploadResp.SecureURL
+			imageStrs[key] = &url
+		}
 	}
 
 	// --- CHECKING ROWS UPDATE ---
@@ -425,7 +450,7 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	product, err := models.EditProduct(ctxTimeout, db, body, imageStrs)
+	product, err := models.EditProduct(ctxTimeout, db, rd, body, imageStrs)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(404, models.Response{

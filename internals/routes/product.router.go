@@ -23,7 +23,7 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client, c
 	})
 
 	productRouter.PATCH("/:id", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {
-		controllers.EditProduct(ctx, db)
+		controllers.EditProduct(ctx, db, rd, cld)
 	})
 
 	productRouter.POST("/delete/:id", middlewares.VerifyToken, middlewares.Access("admin"), func(ctx *gin.Context) {

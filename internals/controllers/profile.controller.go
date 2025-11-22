@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/federus1105/koda-b4-backend/internals/middlewares"
 	"github.com/federus1105/koda-b4-backend/internals/models"
 	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
@@ -31,7 +32,7 @@ import (
 // @Success      200  {object}  models.ResponseSucces
 // @Router       /profile [patch]
 // @Security BearerAuth
-func ProfileUpdate(ctx *gin.Context, db *pgxpool.Pool) {
+func ProfileUpdate(ctx *gin.Context, db *pgxpool.Pool, cld *cloudinary.Cloudinary) {
 	var input models.ProfileUpdate
 	// --- GET USER IN CONTEXT ---
 	userIDInterface, exists := ctx.Get(middlewares.UserIDKey)
@@ -99,26 +100,57 @@ func ProfileUpdate(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
+	useCloudinary := os.Getenv("CLOUDINARY_URL") != ""
 	// --- UPLOAD PHOTO ---
 	if input.Photos != nil {
-		savePath, generatedFilename, err := utils.UploadImageFile(ctx, input.Photos, "public", fmt.Sprintf("user_%d", user.ID))
-		if err != nil {
-			log.Println("Upload image failed:", err)
-			ctx.JSON(400, models.Response{
-				Success: false,
-				Message: err.Error(),
+		fileID := fmt.Sprintf("user_%d", user.ID)
+		if !useCloudinary {
+
+			// === LOCAL UPLOAD ===
+			savePath, generatedFilename, err := utils.UploadImageFile(
+				ctx,
+				input.Photos,
+				"public",
+				fileID,
+			)
+			if err != nil {
+				ctx.JSON(400, models.Response{
+					Success: false,
+					Message: err.Error(),
+				})
+				return
+			}
+
+			if err := ctx.SaveUploadedFile(input.Photos, savePath); err != nil {
+				ctx.JSON(500, gin.H{
+					"success": false,
+					"error":   "failed to save image",
+				})
+				return
+			}
+
+			input.PhotosStr = &generatedFilename
+
+		} else {
+			// === CLOUDINARY UPLOAD ===
+			overwrite := true
+			uploadResp, err := cld.Upload.Upload(ctx, input.Photos, uploader.UploadParams{
+				Folder:    "assets/user",
+				PublicID:  fileID,
+				Overwrite: &overwrite,
 			})
-			return
+
+			if err != nil {
+				ctx.JSON(500, gin.H{
+					"success": false,
+					"message": "failed to upload image to cloudinary",
+				})
+				return
+			}
+
+			url := uploadResp.SecureURL
+			input.PhotosStr = &url
 		}
-		if err := ctx.SaveUploadedFile(input.Photos, savePath); err != nil {
-			log.Println("Save file failed : ", err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "failed to save image",
-			})
-			return
-		}
-		input.PhotosStr = &generatedFilename
 	}
 
 	// --- CHECKING ROWS UPDATE ---

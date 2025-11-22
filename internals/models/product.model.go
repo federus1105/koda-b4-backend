@@ -286,7 +286,7 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body
 	return newProduct, nil
 }
 
-func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, images map[string]*string) (CreateProducts, error) {
+func EditProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body UpdateProducts, images map[string]*string) (CreateProducts, error) {
 	// --- START QUERY TRANSACTION ---
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -527,6 +527,10 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, body UpdateProducts, ima
 	if err != nil {
 		log.Println("Failed to commit transaction:", err)
 		return CreateProducts{}, err
+	}
+	// --- INVALIDATE ---
+	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product"); err != nil {
+		log.Println("Failed to invalidate product cache:", err)
 	}
 
 	return product, nil

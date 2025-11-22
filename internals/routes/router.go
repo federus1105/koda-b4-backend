@@ -30,7 +30,7 @@ func InitRouter(app *gin.Engine, db *pgxpool.Pool, rd *redis.Client, cld *cloudi
 	InitCategoriesRouter(app, db)
 	InitOrderClientRoutes(app, db)
 	InitHistoryRouter(app, db)
-	InitProfileRouter(app, db)
+	InitProfileRouter(app, db, cld)
 
 	app.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(404, models.Response{
