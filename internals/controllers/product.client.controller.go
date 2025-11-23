@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // GetListProductFavorite godoc
@@ -114,7 +115,7 @@ func GetListFavoriteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 // @Failure 500 {object} models.Response "Failed to retrieve product list"
 // @Router /product [get]
 // @Security BearerAuth
-func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
+func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 	// --- GET QUERY PARAMS ---
 	pageStr := ctx.Query("page")
 	page, err := strconv.Atoi(pageStr)
@@ -122,7 +123,7 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 		page = 1
 	}
 
-	limit := 10
+	limit := 8
 	offset := (page - 1) * limit
 	name := ctx.Query("name")
 
@@ -164,7 +165,7 @@ func GetListProductFilter(ctx *gin.Context, db *pgxpool.Pool) {
 		return
 	}
 
-	products, err := models.GetListProductFilter(ctxTimeout, db, name, categoryIDs, minPrice, maxPrice, sortBy, limit, offset)
+	products, err := models.GetListProductFilter(ctxTimeout, db, rd, name, categoryIDs, minPrice, maxPrice, sortBy, limit, offset)
 	if err != nil {
 		ctx.JSON(500, models.Response{
 			Success: false,

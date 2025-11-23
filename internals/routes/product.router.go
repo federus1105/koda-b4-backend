@@ -41,7 +41,7 @@ func InitProductRouter(router *gin.Engine, db *pgxpool.Pool, rd *redis.Client, c
 	})
 
 	productRouterFilter.GET("", func(ctx *gin.Context) {
-		controllers.GetListProductFilter(ctx, db)
+		controllers.GetListProductFilter(ctx, db, rd)
 	})
 
 	productRouterFilter.GET("/:id", middlewares.VerifyToken, func(ctx *gin.Context) {

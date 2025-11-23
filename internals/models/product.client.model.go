@@ -3,10 +3,13 @@ package models
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type FavoriteProduct struct {
@@ -77,12 +80,32 @@ func GetListFavoriteProduct(ctx context.Context, db *pgxpool.Pool, limit, offset
 
 }
 
-func GetListProductFilter(ctx context.Context, db *pgxpool.Pool,
+func GetListProductFilter(ctx context.Context, db *pgxpool.Pool, rd *redis.Client,
 	name string,
 	categoryIDs []int,
 	minPrice, maxPrice float64,
 	sortBy string,
 	limit, offset int) ([]FavoriteProduct, error) {
+
+	// --- REDIS ----
+	catStr := ""
+	if len(categoryIDs) > 0 {
+		strIDs := make([]string, len(categoryIDs))
+		for i, id := range categoryIDs {
+			strIDs[i] = fmt.Sprintf("%d", id)
+		}
+		catStr = strings.Join(strIDs, ",")
+	}
+	redisKey := fmt.Sprintf("product_filter:name=%s&category=%s&min=%.2f&max=%.2f&sort=%s&limit=%d&offset=%d",
+		name, catStr, minPrice, maxPrice, sortBy, limit, offset)
+
+	// --- CHECK CACHE ---
+	if cached, err := libs.GetFromCache[[]FavoriteProduct](ctx, rd, redisKey); err != nil {
+		log.Println("Redis Error:", err)
+	} else if cached != nil && len(*cached) > 0 {
+		log.Printf("Key %s found in cache Served in using Redis 👌", redisKey)
+		return *cached, nil
+	}
 
 	sql := `
 SELECT DISTINCT p.id,
@@ -166,6 +189,11 @@ WHERE p.is_deleted = false
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
+	}
+
+	// --- Save to Cache ---
+	if err := libs.SetToCache(ctx, rd, redisKey, products, 5*time.Minute); err != nil {
+		log.Println("Redis Error:", err)
 	}
 
 	return products, nil
