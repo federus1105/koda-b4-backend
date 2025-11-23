@@ -14,14 +14,14 @@ import (
 )
 
 type Product struct {
-	Id          int      `json:"id"`
-	Image       string   `json:"image"`
-	Name        string   `json:"name"`
-	Price       string   `json:"price"`
-	Description string   `json:"description"`
-	Stock       string   `json:"stock"`
-	Size        []string `json:"size"`
-	Variant     []string `json:"variant"`
+	Id          int               `json:"id"`
+	Name        string            `json:"name"`
+	Price       string            `json:"price"`
+	Description string            `json:"description"`
+	Stock       string            `json:"stock"`
+	Size        []string          `json:"size"`
+	Variant     []string          `json:"variant"`
+	Images      map[string]string `json:"images"`
 }
 type CreateProducts struct {
 	Id             int                   `form:"id"`
@@ -98,19 +98,23 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 	sql := `SELECT
     p.id,
     p.name,
-    pi.photos_one AS image,
+    pi.photos_one,
+    pi.photos_two,
+    pi.photos_three,
+    pi.photos_four,
     p.priceOriginal AS price,
     p.description,
     p.stock,
     COALESCE(ARRAY_AGG(DISTINCT s.name) FILTER (WHERE s.name IS NOT NULL), '{}') AS sizes,
     COALESCE(ARRAY_AGG(DISTINCT v.name) FILTER (WHERE v.name IS NOT NULL), '{}') AS variants
 FROM product p
-JOIN product_images pi ON pi.id = p.id_product_images
+LEFT JOIN product_images pi ON pi.id = p.id_product_images
 LEFT JOIN size_product sp ON sp.id_product = p.id
 LEFT JOIN sizes s ON s.id = sp.id_size
 LEFT JOIN variant_product vp ON vp.id_product = p.id
 LEFT JOIN variants v ON v.id = vp.id_variant
-WHERE p.is_deleted = false`
+WHERE p.is_deleted = false
+`
 
 	args := []interface{}{}
 	argIdx := 1
@@ -124,7 +128,7 @@ WHERE p.is_deleted = false`
 
 	// --- GROUP BY & ORDER LIMIT OFFSET ---
 	sql += fmt.Sprintf(`
-	GROUP BY p.id, pi.photos_one, p.priceOriginal, p.description, p.stock, p.name
+	GROUP BY p.id, p.name, pi.photos_one, pi.photos_two, pi.photos_three, pi.photos_four, p.priceOriginal, p.description, p.stock
 	ORDER BY p.createdat ASC
 	LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
@@ -141,24 +145,46 @@ WHERE p.is_deleted = false`
 		var (
 			id          int
 			name        string
-			image       string
+			photosOne   *string
+			photosTwo   *string
+			photosThree *string
+			photosFour  *string
 			price       float64
 			description string
 			stock       int
 			sizes       []string
 			variants    []string
 		)
-		if err := rows.Scan(&id, &name, &image, &price, &description, &stock, &sizes, &variants); err != nil {
+		if err := rows.Scan(&id, &name, &photosOne, &photosTwo, &photosThree, &photosFour, &price, &description, &stock, &sizes, &variants); err != nil {
 			return nil, err
+		}
+
+		images := map[string]string{
+			"photos_one":   "",
+			"photos_two":   "",
+			"photos_three": "",
+			"photos_four":  "",
+		}
+		if photosOne != nil {
+			images["photos_one"] = *photosOne
+		}
+		if photosTwo != nil {
+			images["photos_two"] = *photosTwo
+		}
+		if photosThree != nil {
+			images["photos_three"] = *photosThree
+		}
+		if photosFour != nil {
+			images["photos_four"] = *photosFour
 		}
 
 		product := Product{
 			Id:          id,
 			Name:        name,
-			Image:       image,
 			Price:       fmt.Sprintf("%.0f", price),
 			Description: description,
 			Stock:       fmt.Sprintf("%d", stock),
+			Images:      images,
 			Size:        sizes,
 			Variant:     variants,
 		}
@@ -535,7 +561,7 @@ func DeleteProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, id i
 	result, err := db.Exec(ctx, sql, id)
 	if err != nil {
 		log.Printf("failed to execute delete query: %v", err)
-		if ctxErr := ctx.Err(); ctxErr != nil { 
+		if ctxErr := ctx.Err(); ctxErr != nil {
 			log.Printf("context error: %v", ctxErr)
 		}
 		return err
