@@ -31,17 +31,18 @@ type Items struct {
 }
 
 type DetailHistories struct {
-	Id          int     `json:"id"`
-	OrderNumber string  `json:"order_number"`
-	Fullname    string  `json:"fullname"`
-	Phone       string  `json:"phone"`
-	Email       string  `json:"email"`
-	Addres      string  `json:"address"`
-	Payment     string  `json:"payment"`
-	Delivery    string  `json:"delivery"`
-	Status      string  `json:"status"`
-	Total       float64 `json:"total"`
-	Items       []Items `json:"items"`
+	Id          int       `json:"id"`
+	OrderNumber string    `json:"order_number"`
+	Fullname    string    `json:"fullname"`
+	Phone       string    `json:"phone"`
+	Email       string    `json:"email"`
+	Addres      string    `json:"address"`
+	Payment     string    `json:"payment"`
+	Delivery    string    `json:"delivery"`
+	Status      string    `json:"status"`
+	Total       float64   `json:"total"`
+	CreatedAt   time.Time `json:"created_at"`
+	Items       []Items   `json:"items"`
 }
 
 func GetHistory(ctx context.Context, db *pgxpool.Pool, IdUser int, month, status, limit, offset int) ([]History, error) {
@@ -109,6 +110,7 @@ func DetailHistory(ctx context.Context, db *pgxpool.Pool, idUser, idHistory int)
     d.name as delivery,
     s.name as status,
     o.total,
+	o.createdat,
     json_agg(
         json_build_object(
             'id', p.id,
@@ -144,6 +146,7 @@ func DetailHistory(ctx context.Context, db *pgxpool.Pool, idUser, idHistory int)
 		&history.Delivery,
 		&history.Status,
 		&history.Total,
+		&history.CreatedAt,
 		&productsJSON,
 	)
 	if err != nil {
