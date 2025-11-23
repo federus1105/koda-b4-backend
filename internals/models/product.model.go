@@ -22,6 +22,7 @@ type Product struct {
 	Size        []string          `json:"size"`
 	Variant     []string          `json:"variant"`
 	Images      map[string]string `json:"images"`
+	Rating      float64           `json:"rating"`
 }
 type CreateProducts struct {
 	Id             int                   `form:"id"`
@@ -105,6 +106,7 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
     p.priceOriginal AS price,
     p.description,
     p.stock,
+	p.rating,
     COALESCE(ARRAY_AGG(DISTINCT s.name) FILTER (WHERE s.name IS NOT NULL), '{}') AS sizes,
     COALESCE(ARRAY_AGG(DISTINCT v.name) FILTER (WHERE v.name IS NOT NULL), '{}') AS variants
 FROM product p
@@ -152,10 +154,11 @@ WHERE p.is_deleted = false
 			price       float64
 			description string
 			stock       int
+			rating      float64
 			sizes       []string
 			variants    []string
 		)
-		if err := rows.Scan(&id, &name, &photosOne, &photosTwo, &photosThree, &photosFour, &price, &description, &stock, &sizes, &variants); err != nil {
+		if err := rows.Scan(&id, &name, &photosOne, &photosTwo, &photosThree, &photosFour, &price, &description, &stock, &rating, &sizes, &variants); err != nil {
 			return nil, err
 		}
 
@@ -184,6 +187,7 @@ WHERE p.is_deleted = false
 			Price:       fmt.Sprintf("%.0f", price),
 			Description: description,
 			Stock:       fmt.Sprintf("%d", stock),
+			Rating:      rating,
 			Images:      images,
 			Size:        sizes,
 			Variant:     variants,
