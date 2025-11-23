@@ -6,6 +6,7 @@ import (
 	"log"
 	"mime/multipart"
 	"strings"
+	"time"
 
 	"github.com/federus1105/koda-b4-backend/internals/pkg/libs"
 	"github.com/federus1105/koda-b4-backend/internals/pkg/utils"
@@ -29,12 +30,13 @@ type ReqUpdatePassword struct {
 }
 
 type Profiles struct {
-	Id       int     `json:"id"`
-	Fullname string  `json:"fullname"`
-	Phone    *string `json:"phone"`
-	Address  *string `json:"address"`
-	Photos   *string `json:"photos"`
-	Email    string  `json:"email"`
+	Id        int       `json:"id"`
+	Fullname  string    `json:"fullname"`
+	Phone     *string   `json:"phone"`
+	Address   *string   `json:"address"`
+	Photos    *string   `json:"photos"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func UpdateProfile(ctx context.Context, db *pgxpool.Pool, input ProfileUpdate, Id int) (ProfileUpdate, error) {
@@ -171,7 +173,8 @@ func Profile(ctx context.Context, db *pgxpool.Pool, userId int) (Profiles, error
 	var profile Profiles
 	sql := `SELECT a.id, a.fullname, 
 	a.phonenumber, a.address, 
-	a.photos, u.email FROM account a
+	a.photos, u.email,
+	a.createdat FROM account a
 	JOIN users u ON u.id = a.id_users
 	WHERE u.id = $1`
 
@@ -182,6 +185,7 @@ func Profile(ctx context.Context, db *pgxpool.Pool, userId int) (Profiles, error
 		&profile.Address,
 		&profile.Photos,
 		&profile.Email,
+		&profile.CreatedAt,
 	)
 
 	if err != nil {
