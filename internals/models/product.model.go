@@ -21,6 +21,7 @@ type Product struct {
 	Description string   `json:"description"`
 	Stock       string   `json:"stock"`
 	Size        []string `json:"size"`
+	Variant     []string `json:"variant"`
 }
 type CreateProducts struct {
 	Id             int                   `form:"id"`
@@ -95,21 +96,21 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 	}
 
 	sql := `SELECT
-        p.id,
-        p.name,
-        pi.photos_one AS image,
-        p.priceOriginal AS price,
-        p.description,
-        p.stock,
-        s.name AS size
-    FROM product p
-    JOIN product_images pi 
-        ON pi.id = p.id_product_images
-    JOIN size_product sp
-        ON sp.id_product = p.id
-    JOIN sizes s
-        ON s.id = sp.id_size
-    WHERE p.is_deleted = false`
+    p.id,
+    p.name,
+    pi.photos_one AS image,
+    p.priceOriginal AS price,
+    p.description,
+    p.stock,
+    COALESCE(ARRAY_AGG(DISTINCT s.name) FILTER (WHERE s.name IS NOT NULL), '{}') AS sizes,
+    COALESCE(ARRAY_AGG(DISTINCT v.name) FILTER (WHERE v.name IS NOT NULL), '{}') AS variants
+FROM product p
+JOIN product_images pi ON pi.id = p.id_product_images
+LEFT JOIN size_product sp ON sp.id_product = p.id
+LEFT JOIN sizes s ON s.id = sp.id_size
+LEFT JOIN variant_product vp ON vp.id_product = p.id
+LEFT JOIN variants v ON v.id = vp.id_variant
+WHERE p.is_deleted = false`
 
 	args := []interface{}{}
 	argIdx := 1
@@ -121,8 +122,11 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 		argIdx++
 	}
 
-	// --- ORDER LIMIT, OFFSET ---
-	sql += fmt.Sprintf(" ORDER BY p.name ASC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	// --- GROUP BY & ORDER LIMIT OFFSET ---
+	sql += fmt.Sprintf(`
+	GROUP BY p.id, pi.photos_one, p.priceOriginal, p.description, p.stock, p.name
+	ORDER BY p.createdat ASC
+	LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	// --- EXECUTE QUERY ---
@@ -132,48 +136,35 @@ func GetListProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, nam
 	}
 	defer rows.Close()
 
-	productMap := make(map[int]*Product)
+	products := make([]Product, 0, limit)
 	for rows.Next() {
-		var id int
-		var name, image, description string
-		var price float64
-		var stock int
-		var size *string
-
-		if err := rows.Scan(&id, &name, &image, &price, &description, &stock, &size); err != nil {
+		var (
+			id          int
+			name        string
+			image       string
+			price       float64
+			description string
+			stock       int
+			sizes       []string
+			variants    []string
+		)
+		if err := rows.Scan(&id, &name, &image, &price, &description, &stock, &sizes, &variants); err != nil {
 			return nil, err
 		}
 
-		// -- PARSE TO STRING ---
-		priceStr := fmt.Sprintf("%.0f", price)
-		stockStr := fmt.Sprintf("%d", stock)
-
-		if p, exists := productMap[id]; exists {
-			if size != nil {
-				p.Size = append(p.Size, *size)
-			}
-		} else {
-			newProduct := Product{
-				Id:          id,
-				Name:        name,
-				Image:       image,
-				Price:       priceStr,
-				Description: description,
-				Stock:       stockStr,
-				Size:        []string{},
-			}
-			if size != nil {
-				newProduct.Size = []string{*size}
-			}
-			productMap[id] = &newProduct
+		product := Product{
+			Id:          id,
+			Name:        name,
+			Image:       image,
+			Price:       fmt.Sprintf("%.0f", price),
+			Description: description,
+			Stock:       fmt.Sprintf("%d", stock),
+			Size:        sizes,
+			Variant:     variants,
 		}
-	}
 
-	products := make([]Product, 0, len(productMap))
-	for _, p := range productMap {
-		products = append(products, *p)
+		products = append(products, product)
 	}
-
 	// --- SAVING TO CACHE ---
 	if err := libs.SetToCache(ctx, rd, redisKey, products, 5*time.Minute); err != nil {
 		log.Println("Redis Error:", err)
@@ -279,7 +270,7 @@ func CreateProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body
 	}
 
 	// --- INVALIDATE ---
-	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product"); err != nil {
+	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product*"); err != nil {
 		log.Println("Failed to invalidate product cache:", err)
 	}
 
@@ -529,7 +520,7 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body U
 		return CreateProducts{}, err
 	}
 	// --- INVALIDATE ---
-	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product"); err != nil {
+	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product*"); err != nil {
 		log.Println("Failed to invalidate product cache:", err)
 	}
 
@@ -537,14 +528,14 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body U
 
 }
 
-func DeleteProduct(ctx context.Context, db *pgxpool.Pool,  rd *redis.Client, id int) error {
+func DeleteProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, id int) error {
 	sql := `UPDATE product SET is_deleted = TRUE
 	WHERE id = $1`
 
 	result, err := db.Exec(ctx, sql, id)
 	if err != nil {
 		log.Printf("failed to execute delete query: %v", err)
-		if ctxErr := ctx.Err(); ctxErr != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil { 
 			log.Printf("context error: %v", ctxErr)
 		}
 		return err
@@ -556,9 +547,9 @@ func DeleteProduct(ctx context.Context, db *pgxpool.Pool,  rd *redis.Client, id 
 	if rows == 0 {
 		return fmt.Errorf("product with id %d not found", id)
 	}
-	
-		// --- INVALIDATE ---
-	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product"); err != nil {
+
+	// --- INVALIDATE ---
+	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product*"); err != nil {
 		log.Println("Failed to invalidate product cache:", err)
 	}
 
