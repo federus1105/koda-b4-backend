@@ -537,7 +537,7 @@ func EditProduct(ctx context.Context, db *pgxpool.Pool, rd *redis.Client, body U
 
 }
 
-func DeleteProduct(ctx context.Context, db *pgxpool.Pool, id int) error {
+func DeleteProduct(ctx context.Context, db *pgxpool.Pool,  rd *redis.Client, id int) error {
 	sql := `UPDATE product SET is_deleted = TRUE
 	WHERE id = $1`
 
@@ -555,6 +555,11 @@ func DeleteProduct(ctx context.Context, db *pgxpool.Pool, id int) error {
 
 	if rows == 0 {
 		return fmt.Errorf("product with id %d not found", id)
+	}
+	
+		// --- INVALIDATE ---
+	if err := libs.InvalidateCacheByPattern(ctx, rd, "list-product"); err != nil {
+		log.Println("Failed to invalidate product cache:", err)
 	}
 
 	log.Printf("product with id %d successfully deleted", id)

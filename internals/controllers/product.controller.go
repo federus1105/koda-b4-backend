@@ -513,7 +513,7 @@ func EditProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client, cld *clou
 // @Success 200 {object} models.ResponseSucces
 // @Router /admin/product/delete/{id} [post]
 // @Security BearerAuth
-func DeleteProduct(ctx *gin.Context, db *pgxpool.Pool) {
+func DeleteProduct(ctx *gin.Context, db *pgxpool.Pool, rd *redis.Client) {
 	productIDstr := ctx.Param("id")
 	productId, err := strconv.Atoi(productIDstr)
 	if err != nil {
@@ -527,7 +527,7 @@ func DeleteProduct(ctx *gin.Context, db *pgxpool.Pool) {
 	// ---- LIMITS QUERY EXECUTION TIME ---
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err = models.DeleteProduct(ctxTimeout, db, productId)
+	err = models.DeleteProduct(ctxTimeout, db, rd, productId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(404, models.Response{
