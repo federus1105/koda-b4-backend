@@ -28,7 +28,7 @@ insert into sizes (name) values ('regular'),('medium'),('large');
 
 insert into variants (name) values ('ice'),('hot');
 
-INSERT INTO delivery (name) VALUES ('dine_in'), ('door_delivery'), ('pickup');
+INSERT INTO delivery (name, fee) VALUES ('dine_in', 0), ('door_delivery', 15000), ('pickup', 0);
  
 
 ---  INSERT PRODUCT IMAGES  ---
