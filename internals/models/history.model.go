@@ -47,12 +47,27 @@ type DetailHistories struct {
 
 func GetHistory(ctx context.Context, db *pgxpool.Pool, IdUser int, month, status, limit, offset int) ([]History, error) {
 
-	sql := `SELECT o.id, o.order_number, o.createdat, s.name, o.total, pi.photos_one FROM orders o
-	JOIN product_orders po ON po.id_order = o.id
-	JOIN product p ON p.id = po.id_product
-	JOIN product_images pi ON pi.id = p.id_product_images
-	JOIN status s ON s.id = o.id_status
-	WHERE o.id_account = $1`
+	sql := `
+	SELECT
+		o.id,
+		o.order_number,
+		o.createdat,
+		s.name AS status,
+		o.total,
+		latest.photos_one
+	FROM orders o
+	LEFT JOIN status s ON s.id = o.id_status
+	LEFT JOIN LATERAL (
+		SELECT pi.photos_one
+		FROM product_orders po
+		JOIN product p ON p.id = po.id_product
+		JOIN product_images pi ON pi.id = p.id_product_images
+		WHERE po.id_order = o.id
+		ORDER BY po.id_order DESC
+		LIMIT 1
+	) latest ON TRUE
+	WHERE o.id_account = $1
+	`
 
 	args := []interface{}{IdUser}
 	argIdx := 2
