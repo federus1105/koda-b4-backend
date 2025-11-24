@@ -1,6 +1,7 @@
 CREATE TABLE delivery (
     id serial PRIMARY KEY,
-    name varchar(100) NOT NULL
+    name varchar(100) NOT NULL,
+    fee FLOAT NOT NULL
 );
 
 
@@ -21,6 +22,9 @@ CREATE TABLE orders (
     total FLOAT NOT NULL,
     id_status INT NOT NULL,
     order_number VARCHAR(50) NOT NULL,
+    tax FLOAT NOT NULL,
+    delivery_fee FLOAT NOT NULL,
+    subtotal FLOAT NOT NULL,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
