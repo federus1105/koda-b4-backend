@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -60,6 +61,9 @@ type TransactionsInput struct {
 	Id_PaymentMethod int     `json:"id_paymentMethod" binding:"required"`
 	Id_Delivery      int     `json:"id_delivery" binding:"required"`
 	Order_number     string  `json:"order_number"`
+	Subtotal         float64 `json:"subtotal"`
+	Tax              int     `json:"tax"`
+	DeliveryFee      int     `json:"delivery_fee"`
 	Total            float64 `json:"total"`
 	Products         []TransactionsProduct
 }
@@ -149,7 +153,7 @@ WHERE c.account_id = $1;`
 		var c Card
 		if err := rows.Scan(
 			&c.Id,
-			&c.Id_product,	
+			&c.Id_product,
 			&c.Name,
 			&c.Price,
 			&c.PriceDiscount,
@@ -197,8 +201,8 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 		SELECT c.quantity, p.id as product_id, p.priceoriginal, p.pricediscount, p.flash_sale, s.name AS size, v.name AS variant
 		FROM cart c
 		JOIN product p ON p.id = c.product_id
-		JOIN sizes s ON s.id = c.size_id
-		JOIN variants v ON v.id = c.variant_id
+		LEFT JOIN sizes s ON s.id = c.size_id
+		LEFT JOIN variants v ON v.id = c.variant_id
 		WHERE c.account_id=$1
 	`, Iduser)
 	if err != nil {
@@ -207,11 +211,11 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 	defer rows.Close()
 
 	var products []TransactionsProduct
-	total := 0.0
+	subtotal := 0.0
 
 	for rows.Next() {
 		var productID, quantity int
-		var size, variant string
+		var size, variant sql.NullString
 		var priceOriginal, priceDiscount float64
 		var flashSale bool
 
@@ -224,15 +228,15 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 			price = priceDiscount
 		}
 
-		subtotal := price * float64(quantity)
-		total += subtotal
+		itemSubtotal := price * float64(quantity)
+		subtotal += itemSubtotal
 
 		products = append(products, TransactionsProduct{
 			Id_product: productID,
 			Quantity:   quantity,
-			Subtotal:   subtotal,
-			Variant:    variant,
-			Size:       size,
+			Subtotal:   itemSubtotal,
+			Variant:    variant.String,
+			Size:       size.String,
 		})
 	}
 
@@ -240,6 +244,21 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 	if len(products) == 0 {
 		return result, fmt.Errorf("cart is empty, can't place an order")
 	}
+
+	// --- GET DELIVERY FEE ---
+	var deliveryFee int
+	err = db.QueryRow(ctx, `
+        SELECT fee FROM delivery WHERE id = $1
+    `, input.Id_Delivery).Scan(&deliveryFee)
+	if err != nil {
+		return result, fmt.Errorf("failed get delivery fee: %v", err)
+	}
+
+	// --- TAX ---
+	tax := 2000
+
+	// --- TOTAL FINAL ---
+	totalFinal := subtotal + float64(deliveryFee) + float64(tax)
 
 	// --- START QUERY TRANSACTION ---
 	tx, err := db.Begin(ctx)
@@ -249,15 +268,32 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 	}
 	defer tx.Rollback(ctx)
 
-	// --- INSERT ORDERS L ---
+	// --- INSERT ORDERS ---
 	var orderID int
 	var orderNumber string
 	err = tx.QueryRow(ctx, `
 		INSERT INTO orders(
-			id_account, email, fullname, address, phoneNumber, id_delivery, id_paymentmethod, total, id_status, createdAt, order_number
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1,NOW(), '#ORD-' || LPAD(nextval('orders_id_seq')::text, 3, '0'))
+			id_account, email, fullname, address, phoneNumber,
+			id_delivery, id_paymentmethod, subtotal, tax, delivery_fee,
+			total, id_status, createdAt, order_number
+		)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1,NOW(),
+			'#ORD-' || LPAD(nextval('orders_id_seq')::text, 3, '0')
+		)
 		RETURNING id, order_number
-	`, Iduser, input.Email, input.FullName, input.Address, input.Phone, input.Id_Delivery, input.Id_PaymentMethod, total).Scan(&orderID, &orderNumber)
+	`,
+		Iduser,
+		input.Email,
+		input.FullName,
+		input.Address,
+		input.Phone,
+		input.Id_Delivery,
+		input.Id_PaymentMethod,
+		subtotal,
+		tax,
+		deliveryFee,
+		totalFinal,
+	).Scan(&orderID, &orderNumber)
 	if err != nil {
 		return result, fmt.Errorf("failed insert orders: %v", err)
 	}
@@ -307,7 +343,10 @@ func Transactions(ctx context.Context, db *pgxpool.Pool, input TransactionsInput
 		Id_PaymentMethod: input.Id_PaymentMethod,
 		Id_Delivery:      input.Id_Delivery,
 		Order_number:     orderNumber,
-		Total:            total,
+		Subtotal:         subtotal,
+		Tax:              tax,
+		DeliveryFee:      deliveryFee,
+		Total:            totalFinal,
 		Products:         products,
 	}
 
