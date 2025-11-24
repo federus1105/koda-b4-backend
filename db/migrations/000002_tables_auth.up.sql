@@ -8,8 +8,8 @@ CREATE TABLE users (
 CREATE TABLE account (
     id SERIAL PRIMARY KEY,
     id_users INT NOT NULL,
-    fullname VARCHAR(50) DEFAULT 'user fullname',
-    phoneNumber VARCHAR(12) DEFAULT '081234567890',
+    fullname VARCHAR(50),
+    phoneNumber VARCHAR(12),
     address VARCHAR(100),
     photos VARCHAR(100),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
