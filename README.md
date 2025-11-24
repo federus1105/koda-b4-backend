@@ -66,6 +66,7 @@ PRODUCT_SIZE {
 DELIVERY{
     int id
     string name
+    float fee
 }
 
 ORDERS {
@@ -80,6 +81,9 @@ ORDERS {
     float total
     int IDstatus 
     int order_number
+    float delivery_fee
+    float subtotal
+    float tax
     timestamp createdAt
 }
 
