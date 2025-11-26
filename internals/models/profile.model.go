@@ -17,7 +17,7 @@ type ProfileUpdate struct {
 	Id        int                   `form:"id"`
 	Fullname  *string               `form:"fullname" binding:"omitempty,max=30"`
 	Email     *string               `form:"email" binding:"omitempty,email"`
-	Phone     *string               `form:"phone" binding:"omitempty,len=12,numeric"`
+	Phone     *string           	`form:"phone" binding:"omitempty,min=10,max=13,numeric"`
 	Address   *string               `form:"address" binding:"omitempty,max=50"`
 	Photos    *multipart.FileHeader `form:"photos"`
 	PhotosStr *string               `form:"photosStr,omitempty"`
@@ -58,7 +58,7 @@ func UpdateProfile(ctx context.Context, db *pgxpool.Pool, input ProfileUpdate, I
 		idx++
 	}
 
-	if input.Phone != nil {
+	if input.Phone != nil && *input.Phone != "" {
 		setClauses = append(setClauses, fmt.Sprintf("phoneNumber=$%d", idx))
 		args = append(args, *input.Phone)
 		idx++

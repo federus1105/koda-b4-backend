@@ -56,7 +56,7 @@ type TransactionsInput struct {
 	Id_Orders        int     `json:"id_orders"`
 	FullName         string  `json:"fullname" binding:"omitempty,max=30"`
 	Address          string  `json:"address" binding:"omitempty,max=50"`
-	Phone            string  `json:"phone" binding:"omitempty,len=12,numeric"`
+	Phone            string  `json:"phone" binding:"omitempty,min=10,max=13,numeric"`
 	Email            string  `json:"email" binding:"omitempty,email"`
 	Id_PaymentMethod int     `json:"id_paymentMethod" binding:"required"`
 	Id_Delivery      int     `json:"id_delivery" binding:"required"`
