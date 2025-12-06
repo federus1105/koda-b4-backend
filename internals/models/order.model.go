@@ -18,6 +18,7 @@ type ItemList struct {
 }
 
 type OrderList struct {
+	Id          int        `json:"id"`
 	OrderNumber string     `json:"orderNumber"`
 	Date        time.Time  `json:"date"`
 	Status      string     `json:"status"`
@@ -55,7 +56,8 @@ func GetListOrder(ctx context.Context, db *pgxpool.Pool, OrderNumber string, sta
 	var productsJSON []byte
 
 	sql := `
-SELECT 
+SELECT
+	o.id,
     o.order_number,
     o.createdAt,
     s.name,
@@ -115,7 +117,7 @@ JOIN status s ON s.id = o.id_status
 
 	var order []OrderList
 	for rows.Next() {
-		if err := rows.Scan(&p.OrderNumber, &p.Date, &p.Status, &p.Total, &productsJSON); err != nil {
+		if err := rows.Scan(&p.Id, &p.OrderNumber, &p.Date, &p.Status, &p.Total, &productsJSON); err != nil {
 			return nil, err
 		}
 
