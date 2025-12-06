@@ -12,11 +12,12 @@ import (
 
 type UserList struct {
 	Id       int    `json:"id"`
-	Photo    string `json:"photo"`
+	Photo    *string `json:"photo"`
 	Fullname string `json:"fullname"`
-	Phone    string `json:"phone"`
-	Address  string `json:"address"`
+	Phone    *string `json:"phone"`
+	Address  *string `json:"address"`
 	Email    string `json:"email"`
+	Role     string `json:"role"`
 }
 
 type UserBody struct {
@@ -34,7 +35,7 @@ type UserBody struct {
 type UserUpdateBody struct {
 	Id        int                   `form:"id"`
 	Fullname  *string               `form:"fullname" binding:"omitempty,max=30"`
-	Email     *string               `form:"email" binding:"email"`
+	Email     *string               `form:"email" binding:"omitempty,email"`
 	Phone     *string               `form:"phone" binding:"omitempty,max=12"`
 	Address   *string               `form:"address" binding:"omitempty,max=50"`
 	Photos    *multipart.FileHeader `form:"photos"`
@@ -48,6 +49,7 @@ func GetListUser(ctx context.Context, db *pgxpool.Pool, name string, limit, offs
 	a.fullname, 
 	a.phonenumber, 
 	COALESCE(address, '') AS address,
+	u.role,
 	u.email FROM account a
 	JOIN users u ON u.id = a.id_users`
 
@@ -75,7 +77,7 @@ func GetListUser(ctx context.Context, db *pgxpool.Pool, name string, limit, offs
 	var users []UserList
 	for rows.Next() {
 		var p UserList
-		if err := rows.Scan(&p.Id, &p.Photo, &p.Fullname, &p.Phone, &p.Address, &p.Email); err != nil {
+		if err := rows.Scan(&p.Id, &p.Photo, &p.Fullname, &p.Phone, &p.Address, &p.Role, &p.Email); err != nil {
 			return nil, err
 		}
 		users = append(users, p)
