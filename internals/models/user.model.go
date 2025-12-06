@@ -11,6 +11,7 @@ import (
 )
 
 type UserList struct {
+	Id       int    `json:"id"`
 	Photo    string `json:"photo"`
 	Fullname string `json:"fullname"`
 	Phone    string `json:"phone"`
@@ -42,6 +43,7 @@ type UserUpdateBody struct {
 
 func GetListUser(ctx context.Context, db *pgxpool.Pool, name string, limit, offset int) ([]UserList, error) {
 	sql := `SELECT 
+	u.id,
 	COALESCE(photos, '') AS photos, 
 	a.fullname, 
 	a.phonenumber, 
@@ -73,7 +75,7 @@ func GetListUser(ctx context.Context, db *pgxpool.Pool, name string, limit, offs
 	var users []UserList
 	for rows.Next() {
 		var p UserList
-		if err := rows.Scan(&p.Photo, &p.Fullname, &p.Phone, &p.Address, &p.Email); err != nil {
+		if err := rows.Scan(&p.Id, &p.Photo, &p.Fullname, &p.Phone, &p.Address, &p.Email); err != nil {
 			return nil, err
 		}
 		users = append(users, p)
